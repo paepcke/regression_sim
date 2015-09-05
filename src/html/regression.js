@@ -6,7 +6,8 @@ function LineAnimator() {
 	var coordSys = {'topLeftX'  : gridSize,
 					'topLeftY'  : 0,
 					'width'     : 500,
-					'height'    : 375};
+					'height'    : 370	};
+					//'height'    : 375};
 		            
 	var xAxisLabel = "Distance";
 	var yAxisLabel = "Potatoes";
@@ -88,18 +89,36 @@ function LineAnimator() {
 		
 		// Draw the initial function line as
 		//   y = 0.5x + 3
-		//****drawFuncLine(0.5, 3);
-		drawFuncLine(0, 3);
+		drawFuncLine(0.5, 3);
 		
     }
     
-    var drawFuncLine = function(slope, intercept) {
-    	
-    	pixelIntercept = yAxisHeight - intercept * gridSize;
-    	pixelSlope     = slope * gridSize;
+    var drawFuncLine = function(slope, intercept, xMax) {
+    	/**
+    	 * Given slope and intercept, draw a line from 
+    	 * the y-intercept to either the end of the x-axis
+    	 * (if xMax is not provided), or to xMax, if it
+    	 * is. All units are in terms of the visible grid.
+    	 * This method converts to pixel dimension, and 
+    	 * accounts for canvas y-dimension growing downward.
+    	 */
+    
+    	if (xMax === undefined) {
+    		pixelxMax = xAxisLen;
+    	} else {
+    		// Add one gridSize, b/c the y-axis is shifted
+    		// right by one grid width to make room for the
+    		// y-axis label:
+    		pixelxMax = gridSize + gridSize * xMax;
+    	}
+    	var pixelIntercept = yAxisHeight - intercept * gridSize;
+    	// Slope multiplied by -1 to account for y-coord
+    	// growing down instead of up as y increases:
+    	var pixelSlope = - slope;
     	ctx.beginPath();
     	ctx.moveTo(gridSize, pixelIntercept);
-    	ctx.lineTo(xAxisLen, pixelSlope * xAxisLen + pixelIntercept - yAxisHeight);
+    	ctx.lineTo(pixelxMax, pixelSlope * pixelxMax - gridSize + pixelIntercept);
+    	
     	ctx.stroke();
     }
     
