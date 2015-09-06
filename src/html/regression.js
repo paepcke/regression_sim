@@ -42,6 +42,31 @@ RegressionSim = function() {
 		// Create grid lines, axes, and axis labels:
 		coordSys = makeCoordSys();
 		svgArea.appendChild(coordSys);
+				
+		// We couldn't place the axis labels when they
+		// were created, b/c their width/heights were 
+		// unknown at the point. Move them now:
+		
+		var xLabel = document.getElementById('xLabel');
+		var xLabelBox = xLabel.getBBox();
+		// The x/y of labels are actually arrays of
+		// SVGLength instances; grab the first (and only)
+		// of those, and get it's value:
+		var currY     = xLabel.y.baseVal[0].value;
+		// Add the label's height to its y to move
+		// it below the x axis:
+		xLabel.setAttribute('y', currY + xLabelBox.height);
+		
+		//**********
+		var yLabel = document.getElementById('yLabel');
+		var yLabelBox = yLabel.getBBox();
+		yLabel.x.baseVal.value = svgArea.createSVGLength(0);
+		//***yLabel.setAttribute('y', yLabelBox.height);
+		//***yLabel.setAttribute('y', 56);
+		//***yLabel.y.baseVal.value = yLabelBox.width;
+		yLabel.y.baseVal.value = 56;
+
+		//**********
 	}
 
 	var makeCoordSys = function() {
@@ -90,10 +115,10 @@ RegressionSim = function() {
 		
 		// Draw x axis label:
 		var xLabel = document.createElementNS(NS, 'text');
+		xLabel.setAttribute('id', 'xLabel');
 		xLabel.textContent = xAxisLabel;
 		// Get text width:
-		var labelWidth = xLabel.getBBox().width; 
-		xLabel.setAttribute('x', xAxisWidth - labelWidth);
+		xLabel.setAttribute('x', xAxisWidth);
 		// Make the label *end* at x:
 		xLabel.setAttribute('text-anchor', 'end');
 		xLabel.setAttribute('y', yAxisHeight);
@@ -103,16 +128,20 @@ RegressionSim = function() {
 		
 		// Draw y axis label
 		var yLabel = document.createElementNS(NS, 'text');
+		yLabel.setAttribute('id', 'yLabel');
 		yLabel.textContent = yAxisLabel;
-		// Get text width:
+		// Get text width. The lines below don't
+		// work at this point, b/c the text has not
+		// been rendered yet.
 		//*****var labelWidth  = yLabel.getBBox().width;   <---- {0,0} Bad.
 		//*****var labelHeight = yLabel.getBBox().height;
-		var labelHeight = 100;
+		var labelHeight = 56;
 		var labelWidth  = 100;
 		
-		yLabel.setAttribute('x', halfGridS + labelWidth);
-		yLabel.setAttribute('y', labelHeight);
-		yLabel.setAttribute('fill', '#000');
+		//****yLabel.setAttribute('x', halfGridS + labelWidth);
+/*		yLabel.setAttribute('x', 80);
+		yLabel.setAttribute('y', 48);
+*/		yLabel.setAttribute('fill', '#000');
 
 		// Create a new SVG Transform:
 		var rotationTransform = coordFld.createSVGTransform();
@@ -120,7 +149,11 @@ RegressionSim = function() {
 		// Add the empty rotation transform to the yLabel list of 
 		// SVGTransform objects as item(0):
 		yLabel.transform.baseVal.initialize(rotationTransform);
-		
+
+		//*********
+		yLabel.setAttribute('x', 80);
+		yLabel.setAttribute('y', 48);
+		//*********
 		coordFld.appendChild(yLabel);
 		
 		return coordFld;
