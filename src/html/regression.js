@@ -16,20 +16,33 @@ RegressionSim = function() {
 	var arrowDefaultWidth = 1;
 	var arrowDefaultColor = 'black';
 	
+	// Will be replaced by the SVG 
+	// obj that implements the coordinate
+	// system:
 	var coordSys = {'topLeftX'  : gridSize,
 					'topLeftY'  : 0,
 					'width'     : 500,
 					'height'    : 370	};
 
-	var axisStrokeWidth  = 5;
-	var yAxisHeight 	 = coordSys.height - halfGridS;
-	var yAxisLeftPadding = gridSize;
-	var xAxisWidth       = coordSys.width - gridSize;
+	var axisStrokeWidth   = 5;
+	var axisStrokeOpacity = 0.5;
+	var yAxisHeight 	  = coordSys.height - halfGridS;
+	var yAxisLeftPadding  = gridSize;
+	var xAxisWidth        = coordSys.width - gridSize;
 	
 	var xAxisLabel = "Distance";
 	var yAxisLabel = "Potatoes";
 	
+	var currCoordSlope = 0.5;
+	var currCoordIntercept = 3;
+	var currPixelCoordSlope;
+	var currPixelCoordIntercept;
+
+	var lineStrokeWidth = 4;
 	
+	var lineDragHandleWidth  = gridSize;
+	var lineDragHandleHeight = gridSize;
+		
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
 	}();
@@ -56,19 +69,70 @@ RegressionSim = function() {
 		// Add the label's height to its y to move
 		// it below the x axis:
 		xLabel.setAttribute('y', currY + xLabelBox.height);
-		
-		//**********
-		var yLabel = document.getElementById('yLabel');
-		var yLabelBox = yLabel.getBBox();
-		yLabel.x.baseVal.value = svgArea.createSVGLength(0);
-		//***yLabel.setAttribute('y', yLabelBox.height);
-		//***yLabel.setAttribute('y', 56);
-		//***yLabel.y.baseVal.value = yLabelBox.width;
-		yLabel.y.baseVal.value = 56;
 
-		//**********
+		// Rotate and move the y-axis label:
+		// Create a new SVG Transform:
+		var yLabel    = document.getElementById('yLabel');
+		var yLabelBox = yLabel.getBBox();
+		var rotationTransform = svgArea.createSVGTransform();
+		rotationTransform.setRotate(-90, halfGridS + yLabelBox.height, yLabelBox.width);
+		// Add the empty rotation transform to the yLabel list of 
+		// SVGTransform objects as item(0):
+		yLabel.transform.baseVal.initialize(rotationTransform);
+		
+		// I do not understand what's x vs. y after the
+		// above transform; the two lines below are empirically
+		// determined. But they work even when changing
+		// the y-axis label:
+		yLabel.setAttribute('x', 0);
+		yLabel.setAttribute('y', yLabelBox.width - halfGridS - 5);
+		
+		// Draw the initial function line:
+		line = drawFuncLine(currCoordSlope, currCoordIntercept, xAxisWidth);
+		svgArea.appendChild(line);
+		
+		// Draw line drag handle:
+		makeLineDragHandle();		
 	}
 
+    var drawFuncLine = function(slope, intercept, xMax) {
+    	/**
+    	 * Given slope and intercept, draw a line from 
+    	 * the y-intercept to either the end of the x-axis
+    	 * (if xMax is not provided), or to xMax, if it
+    	 * is. All units are in terms of the visible grid.
+    	 * This method converts to pixel dimension, and 
+    	 * accounts for canvas y-dimension growing downward.
+    	 */
+    
+    	if (xMax === undefined) {
+    		pixelxMax = xAxisLen;
+    	} else {
+    		// Add one gridSize, b/c the y-axis is shifted
+    		// right by one grid width to make room for the
+    		// y-axis label:
+    		pixelxMax = gridSize + gridSize * xMax;
+    	}
+    	
+    	pixelIntercept = yAxisHeight - (gridSize * intercept);
+    	pixelSlope     = - slope;
+    	
+    	line = document.createElementNS(NS, 'line');
+    	line.setAttribute('stroke', 'black');
+    	line.setAttribute('stroke-width', lineStrokeWidth);
+    	line.setAttribute('x1', yAxisLeftPadding);
+    	line.setAttribute('y1', pixelIntercept);
+    	line.setAttribute('x2', xMax);
+    	line.setAttribute('y2', pixelSlope * xMax + pixelIntercept);
+    	
+    	currCoordSlope      	= slope;
+    	currPixelCoordSlope 	= pixelSlope;
+    	currCoordIntercept      = intercept;
+    	currPixelCoordIntercept = pixelIntercept;
+    	
+    	return line;
+    }
+	
 	var makeCoordSys = function() {
 
 		var coordFld = document.createElementNS(NS,"svg");
@@ -76,7 +140,7 @@ RegressionSim = function() {
 		coordFld.height = coordSys.height;
 		
     	// Draw vertical grid lines:
-		for (var x = 0.5; x < coordSys.width; x += gridSize) {
+		for (var x = yAxisLeftPadding; x < coordSys.width; x += gridSize) {
 			var gridLine = document.createElementNS(NS, 'line');
 			gridLine.x1.baseVal.value = x;
 			gridLine.y1.baseVal.value = 0.5;
@@ -91,7 +155,7 @@ RegressionSim = function() {
 		// Draw horizontal grid lines:
 		for (var y = 0.5; y < coordSys.height; y += gridSize) {
 			var gridLine = document.createElementNS(NS, 'line');
-			gridLine.x1.baseVal.value = 0.5;
+			gridLine.x1.baseVal.value = yAxisLeftPadding;
 			gridLine.y1.baseVal.value = y;
 			gridLine.x2.baseVal.value = coordSys.width
 			gridLine.y2.baseVal.value = y;
@@ -104,13 +168,15 @@ RegressionSim = function() {
 		// Draw y axis:
 		var yAxis = makeArrow(yAxisLeftPadding, yAxisHeight,
 			    		      yAxisLeftPadding, gridSize,
-				    	      axisStrokeWidth);
+				    	      axisStrokeWidth,
+				    	      axisStrokeOpacity);
 		coordFld.appendChild(yAxis);
 		
 		// Draw x axis:
 		var xAxis = makeArrow(yAxisLeftPadding - axisStrokeWidth/2, yAxisHeight,
 							  xAxisWidth, yAxisHeight,
-					          axisStrokeWidth);
+					          axisStrokeWidth,
+					          axisStrokeOpacity);
 		coordFld.appendChild(xAxis);
 		
 		// Draw x axis label:
@@ -130,39 +196,32 @@ RegressionSim = function() {
 		var yLabel = document.createElementNS(NS, 'text');
 		yLabel.setAttribute('id', 'yLabel');
 		yLabel.textContent = yAxisLabel;
-		// Get text width. The lines below don't
-		// work at this point, b/c the text has not
-		// been rendered yet.
-		//*****var labelWidth  = yLabel.getBBox().width;   <---- {0,0} Bad.
-		//*****var labelHeight = yLabel.getBBox().height;
 		var labelHeight = 56;
 		var labelWidth  = 100;
 		
-		//****yLabel.setAttribute('x', halfGridS + labelWidth);
-/*		yLabel.setAttribute('x', 80);
-		yLabel.setAttribute('y', 48);
-*/		yLabel.setAttribute('fill', '#000');
+		yLabel.setAttribute('fill', '#000');
 
-		// Create a new SVG Transform:
-		var rotationTransform = coordFld.createSVGTransform();
-		rotationTransform.setRotate(-90, halfGridS + labelHeight, labelWidth);
-		// Add the empty rotation transform to the yLabel list of 
-		// SVGTransform objects as item(0):
-		yLabel.transform.baseVal.initialize(rotationTransform);
-
-		//*********
-		yLabel.setAttribute('x', 80);
-		yLabel.setAttribute('y', 48);
-		//*********
 		coordFld.appendChild(yLabel);
 		
 		return coordFld;
 	}
 	
-	var makeArrow = function(x1, y1, x2, y2, strokeWidth) {
-		if (strokeWidth === undefined) {
+	var makeLineDragHandle = function() {
+		handle = document.createElementNS(NS, 'rect');
+		handle.setAttribute('x', yAxisLeftPadding);
+		handle.setAttribute('y', currPixelCoordIntercept + Math.round(lineDragHandleHeight / 2.0));
+		handle.setAttribute('width', lineDragHandleWidth);
+		handle.setAttribute('height', lineDragHandleHeight);
+	}
+	
+	var makeArrow = function(x1, y1, x2, y2, strokeWidth, strokeOpacity) {
+		if (strokeWidth === undefined || strokeWidth === null) {
 			strokeWidth = arrowDefaultWidth;
 		}
+		if (strokeOpacity === undefined || strokeOpacity=== null) {
+			strokeOpacity = 1;
+		}
+		
 		var arrow = document.createElementNS(NS, 'line');
 		arrow.x1.baseVal.value = x1;
 		arrow.y1.baseVal.value = y1;
@@ -170,6 +229,8 @@ RegressionSim = function() {
 		arrow.y2.baseVal.value = y2;
 		arrow.setAttribute('stroke', arrowDefaultColor);
 		arrow.setAttribute('stroke-width', strokeWidth);
+		arrow.setAttribute('stroke-opacity', axisStrokeOpacity);
+		setArrowheadOpacity(strokeOpacity);
 		arrow.setAttribute('marker-end', 'url(#arrowHead)');
 		return arrow;
 	}
@@ -196,13 +257,20 @@ RegressionSim = function() {
 	    marker.setAttribute('markerHeight', '3');
 	    marker.setAttribute('orient', 'auto');
 	    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+	    path.setAttribute('id', 'arrowHeadPath');
 	    marker.appendChild(path);
 	    path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
 
-	    arrowHead.appendChild(defs);
+   	    arrowHead.appendChild(defs);
 	    defs.appendChild(marker);
 	    
 	    return arrowHead; 
+	}
+	
+	var setArrowheadOpacity = function(opacity) {
+		arrHeadPath = document.getElementById('arrowHeadPath')
+	    arrHeadPath.setAttribute('opacity', opacity);
+
 	}
 }
 
