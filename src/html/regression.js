@@ -40,8 +40,13 @@ RegressionSim = function() {
 
 	var lineStrokeWidth = 4;
 	
-	var lineDragHandleWidth  = gridSize;
-	var lineDragHandleHeight = gridSize;
+	var lineDragHandleWidth      = gridSize;
+	var lineDragHandleHeight     = gridSize;
+	var lineDragHandleRestColor  = 'yellow';
+	var lineDragHandleMoveColor  = 'green';
+	
+	var lineDragHandleState = {'x' : 0, 'y' : 0, 'dragging' : false};
+	var rotatingLine   = false;
 		
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
@@ -92,9 +97,56 @@ RegressionSim = function() {
 		svgArea.appendChild(line);
 		
 		// Draw line drag handle:
-		makeLineDragHandle();		
+		lineDragHandle = makeLineDragHandle();
+		svgArea.appendChild(lineDragHandle);
+		
+		lineDragHandleState.x = lineDragHandle.x;
+		lineDragHandleState.y = lineDragHandle.y;
 	}
 
+	this.lineMoveHandleMouseDown = function(evt) {
+		evt.preventDefault();
+		lineDragHandleState.dragging = true;
+		lineDragHandleState.x = evt.clientX;
+		lineDragHandleState.y = evt.clientY;
+		evt.target.setAttribute('fill', lineDragHandleMoveColor);
+	}
+	
+	this.lineMoveHandleMove = function(evt) {
+		evt.preventDefault();
+		if (lineDragHandleState.dragging) {
+			var currX = lineDragHandleState.x;
+			var currY = lineDragHandleState.y;
+			//****var moveX = currX + (evt.clientX - currX);
+			//****var moveY = currY + (evt.clientY - currY);
+			// Only move vertically:
+			var moveX = 0;
+			//******
+			//var moveY = evt.clientY - currY;
+			var moveY = -1;
+			//******
+
+			var xFormList = evt.target.transform.baseVal;
+			if (xFormList.length === 0) {
+				translationXform = svgArea.createSVGTransform();
+				xFormList.initialize(translationXform);
+			} else {
+				translationXform = xFormList[0];
+			}
+			translationXform.setTranslate(moveX, moveY);
+
+			lineDragHandleState.y = evt.target.y;
+		}
+	}
+	
+	this.lineMoveHandleMouseUp = function(evt) {
+		lineDragHandleState.dragging = false;
+		lineDragHandleState.x = evt.clientX;
+		lineDragHandleState.y = evt.clientY;
+		evt.target.setAttribute('fill', lineDragHandleRestColor);
+	}
+
+	
     var drawFuncLine = function(slope, intercept, xMax) {
     	/**
     	 * Given slope and intercept, draw a line from 
@@ -207,11 +259,19 @@ RegressionSim = function() {
 	}
 	
 	var makeLineDragHandle = function() {
-		handle = document.createElementNS(NS, 'rect');
-		handle.setAttribute('x', yAxisLeftPadding);
-		handle.setAttribute('y', currPixelCoordIntercept + Math.round(lineDragHandleHeight / 2.0));
+		var handle = document.createElementNS(NS, 'rect');
+		handle.setAttribute('id', 'lineDragHandle');
+		handle.setAttribute('x', yAxisLeftPadding - Math.round(lineDragHandleWidth / 2));
+		handle.setAttribute('y', currPixelCoordIntercept - Math.round(lineDragHandleHeight / 2.0));
 		handle.setAttribute('width', lineDragHandleWidth);
 		handle.setAttribute('height', lineDragHandleHeight);
+		handle.setAttribute('fill', lineDragHandleRestColor);
+		handle.setAttribute('stroke', 'black');
+		
+		// Cause cursor to change when hovering over handle:
+		//****handle.setAttribute('class', 'draggable');
+		
+		return handle;
 	}
 	
 	var makeArrow = function(x1, y1, x2, y2, strokeWidth, strokeOpacity) {
@@ -276,3 +336,8 @@ RegressionSim = function() {
 
 regSim = new RegressionSim();
 regSim.setup();
+
+document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
+document.getElementById('lineDragHandle').addEventListener('mousemove', regSim.lineMoveHandleMove);
+document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
+
