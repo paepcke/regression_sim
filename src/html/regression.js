@@ -48,9 +48,16 @@ RegressionSim = function() {
 	var lineDragHandleHalfHeight = Math.round(lineDragHandleHeight / 2.0);
 	var lineDragHandleRestColor  = 'yellow';
 	var lineDragHandleMoveColor  = 'green';
-	
 	var lineDragHandleState = {'x' : 0, 'y' : 0, 'dragging' : false};
-	var rotatingLine   = false;
+	
+	var rotateHandle;
+	var rotateHandleWidth      = gridSize;
+	var rotateHandleHeight     = gridSize;
+	var rotateHandleHalfWidth  = Math.round(rotateHandleWidth/ 2.0);
+	var rotateHandleHalfHeight = Math.round(rotateHandleHeight/ 2.0);
+	var rotateHandleRestColor  = 'yellow';
+	var rotateHandleMoveColor  = 'green';
+	var rotateHandleState = {'x' : 0, 'y' : 0, 'dragging' : false};
 		
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
@@ -97,15 +104,20 @@ RegressionSim = function() {
 		yLabel.setAttribute('y', yLabelBox.width - halfGridS - 5);
 		
 		// Draw the initial function line:
-		line = drawFuncLine(currCoordSlope, currCoordIntercept, xAxisWidth);
+		line = drawFuncLine(currCoordSlope, currCoordIntercept);
 		svgArea.appendChild(line);
 		
 		// Draw line drag handle:
 		lineDragHandle = makeLineDragHandle();
 		svgArea.appendChild(lineDragHandle);
-		
 		lineDragHandleState.x = lineDragHandle.x.baseVal.value;
 		lineDragHandleState.y = lineDragHandle.y.baseVal.value;
+		
+		rotateHandle = makeRotateHandle();
+		svgArea.appendChild(rotateHandle);
+		rotateHandleState.x = rotateHandle.x.baseVal.value;
+		rotateHandleState.y = rotateHandle.y.baseVal.value;
+		
 	}
 	
 	this.lineMoveHandleMouseDown = function(evt) {
@@ -133,6 +145,8 @@ RegressionSim = function() {
 			}
 			lineDragHandle.y.baseVal.value = newY;
 			lineDragHandleState.y = newY;
+			currPixelCoordIntercept = newY;
+			currCoordIntercept      = pixels2Intercept(newY);
 			
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
 		}
@@ -147,6 +161,62 @@ RegressionSim = function() {
 		document.getElementById('svgArea').removeEventListener('mousemove', regSim.lineMoveHandleMove);
 	}
 
+	this.rotateHandleMouseDown = function(evt) {
+		evt.preventDefault();
+		evt.target.style.cursor = 'move';
+		rotateHandleState.dragging = true;
+		rotateHandleState.x = evt.clientX;
+		rotateHandleState.y = evt.clientY;
+		evt.target.setAttribute('fill', rotateHandleMoveColor);
+		document.getElementById('svgArea').addEventListener('mousemove', regSim.rotateHandleMove);
+	}
+		
+	this.rotateHandleMove = function(evt) {
+		evt.preventDefault();
+		if (rotateHandleState.dragging) {
+			
+			// Diff between mouse and upper edge of rotation drag handle:
+			var dYUpperLeft = evt.clientY - rotateHandle.y.baseVal.value;
+			// Left edge of rot handle, but not beyond the x axis:
+			//****var dX = Math.max(xAxisWidth, evt.clientX - rotateHandle.x.baseVal.value);
+			var dXUpperLeft = Math.min(xAxisWidth, evt.clientX);
+
+			var newY = rotateHandle.y.baseVal.value + dYUpperLeft;
+			if ((newY > yAxisHeight - rotateHandleHalfHeight) ||
+				(newY < rotateHandleHeight)) {
+				// Don't allow handle below x axis or into y-axis arrow head:
+				newY = 0;
+			}
+			
+			var newX = rotateHandle.x.baseVal.value + dXUpperLeft;
+			if (newX < 0) {
+				newX = 0;
+			} else if (newX > xAxisWidth) {
+				newX = xAxisWidth;
+			}
+			rotateHandle.y.baseVal.value = newY;
+			rotateHandleState.y = evt.ClientY;
+			rotateHandle.x.baseVal.value = newX;
+			rotateHandleState.x = evt.ClientX;
+			
+			var rotHandleCoordPt = pixelsPt2Coord(newX, newY);
+			var newSlope = rotHandleCoordPt.y / rotHandleCoordPt.x;
+			var newPixelSlope = slope2Pixels(newSlope);
+			currPixelCoordSlope = newPixelSlope;
+			currCoordSlope      = newSlope;
+			
+			drawFuncLineGivenPixelDims(newPixelSlope, currPixelCoordIntercept);
+		}
+	}
+	
+	this.rotateHandleMouseUp = function(evt) {
+		evt.target.style.cursor = 'default';
+		rotateHandleState.dragging = false;
+		rotateHandleState.x = evt.clientX;
+		rotateHandleState.y = evt.clientY;
+		evt.target.setAttribute('fill', rotatHandleRestColor);
+		document.getElementById('svgArea').removeEventListener('mousemove', regSim.lineMoveHandleMove);
+	}
 	
     var drawFuncLine = function(slope, intercept, xMax) {
     	/**
@@ -195,7 +265,29 @@ RegressionSim = function() {
     	
     	return line;
     }
-	
+
+    var pixelsPt2Coord = function(pixelX, pixelY) {
+    	/**
+    	 * Given pixel values for a point, return an 
+    	 * object where x = x-in-coord-system, and 
+    	 * y = y-in-coord-system.
+    	 */
+    	var coordX = (pixelX - yAxisLeftPadding) / gridSize;
+    	var coordY = (yAxisHeight - pixelY) / gridSize;
+    	return {'x' : coordX, 'y' : coordY};
+    }
+    
+    var coordPt2Pixels= function(coordX, coordY) {
+    	/**
+    	 * Given coordinate system values for a point, return an 
+    	 * object where x = x-in-pixels, and 
+    	 * y = y-in-pixels.
+    	 */
+    	pixelsX = coordX * gridSize + yAxisLeftPadding;
+    	pixelsY = (yAxisHeight - coordY) * gridSize;
+    	return {'x' : pixelsX, 'y' : pixelsY};
+    }
+    
     var intercept2Pixels = function(intercept) {
     	return yAxisHeight - (gridSize * intercept);
     }
@@ -294,11 +386,30 @@ RegressionSim = function() {
 		handle.setAttribute('height', lineDragHandleHeight);
 		handle.setAttribute('fill', lineDragHandleRestColor);
 		handle.setAttribute('stroke', 'black');
-		
-		// Cause cursor to change when hovering over handle:
-		//****handle.setAttribute('class', 'draggable');
-		
 		return handle;
+	}
+
+	var makeRotateHandle = function() {
+		var handle = document.createElementNS(NS, 'rect');
+		handle.setAttribute('id', 'rotateHandle');
+		
+		var handlePos = computeRotHandlePixelCoords();
+		handle.setAttribute('x', handlePos.x - Math.round(rotateHandleWidth / 2));
+		handle.setAttribute('y', handlePos.y - Math.round(lineDragHandleHeight / 2.0));
+		handle.setAttribute('width',  rotateHandleWidth);
+		handle.setAttribute('height', rotateHandleHeight);
+		handle.setAttribute('fill',   rotateHandleRestColor);
+		handle.setAttribute('stroke', 'black');
+		return handle;
+	}
+	
+	var computeRotHandlePixelCoords = function() {
+		/**
+		 * Find the right-most visible point on the line.
+		 */
+		var x = Math.min(xAxisWidth, Math.round(-currPixelCoordIntercept / currPixelCoordSlope));
+		var y = currPixelCoordSlope * x + currPixelCoordIntercept;
+		return {'x' : x, 'y' : y};
 	}
 	
 	var makeArrow = function(x1, y1, x2, y2, strokeWidth, strokeOpacity) {
@@ -366,4 +477,6 @@ regSim.setup();
 
 document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
+document.getElementById('rotateHandle').addEventListener('mousedown', regSim.rotateHandleMouseDown);
+document.getElementById('rotateHandle').addEventListener('mouseup'  , regSim.rotateHandleMouseUp);
 
