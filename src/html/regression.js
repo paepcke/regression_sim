@@ -40,8 +40,10 @@ RegressionSim = function() {
 
 	var lineStrokeWidth = 4;
 	
+	var lineDragHandle;
 	var lineDragHandleWidth      = gridSize;
 	var lineDragHandleHeight     = gridSize;
+	var lineDragHandleHalfHeight = Math.round(lineDragHandleHeight / 2.0);
 	var lineDragHandleRestColor  = 'yellow';
 	var lineDragHandleMoveColor  = 'green';
 	
@@ -112,30 +114,37 @@ RegressionSim = function() {
 		evt.target.setAttribute('fill', lineDragHandleMoveColor);
 	}
 	
+	
+	//*********
+	//    o Check that mouseover and mouseout are correct events, and 
+	//       assign them to handle
+	//    o In mouseout: disconnect mousemove.
+	//    o in mousemove: move the line
+	this.lineMoveHandleMouseOver = function(evt) {
+		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
+	}
+	
+	this.lineMoveHandleMouseOut= function(evt) {
+		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
+	}
+	
 	this.lineMoveHandleMove = function(evt) {
 		evt.preventDefault();
 		if (lineDragHandleState.dragging) {
-			var currX = lineDragHandleState.x;
-			var currY = lineDragHandleState.y;
-			//****var moveX = currX + (evt.clientX - currX);
-			//****var moveY = currY + (evt.clientY - currY);
-			// Only move vertically:
-			var moveX = 0;
-			//******
-			//var moveY = evt.clientY - currY;
-			var moveY = -1;
-			//******
-
-			var xFormList = evt.target.transform.baseVal;
-			if (xFormList.length === 0) {
-				translationXform = svgArea.createSVGTransform();
-				xFormList.initialize(translationXform);
-			} else {
-				translationXform = xFormList[0];
+			// Diff between mouse and upper edge of line drag handle:
+			var dY = evt.clientY - lineDragHandle.y.baseVal.value;
+			// Want mouse right in middle of handle:
+			dY -= lineDragHandleHalfHeight;
+			var newY= lineDragHandle.y.baseVal.value + dY;
+			if ((newY > yAxisHeight - lineDragHandleHalfHeight) ||
+				(newY < lineDragHandleHeight)) {
+				// Don't allow handle below x axis or into y-axis arrow head:
+				return;
 			}
-			translationXform.setTranslate(moveX, moveY);
-
-			lineDragHandleState.y = evt.target.y;
+			lineDragHandle.y.baseVal.value = newY;
+			lineDragHandleState.y = newY;
+			
+			
 		}
 	}
 	
@@ -338,6 +347,6 @@ regSim = new RegressionSim();
 regSim.setup();
 
 document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
-document.getElementById('lineDragHandle').addEventListener('mousemove', regSim.lineMoveHandleMove);
+document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
 
