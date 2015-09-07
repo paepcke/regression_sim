@@ -38,6 +38,8 @@ RegressionSim = function() {
 	var currPixelCoordSlope;
 	var currPixelCoordIntercept;
 
+	// Function line object:
+	var line = null;
 	var lineStrokeWidth = 4;
 	
 	var lineDragHandle;
@@ -102,33 +104,20 @@ RegressionSim = function() {
 		lineDragHandle = makeLineDragHandle();
 		svgArea.appendChild(lineDragHandle);
 		
-		lineDragHandleState.x = lineDragHandle.x;
-		lineDragHandleState.y = lineDragHandle.y;
+		lineDragHandleState.x = lineDragHandle.x.baseVal.value;
+		lineDragHandleState.y = lineDragHandle.y.baseVal.value;
 	}
-
+	
 	this.lineMoveHandleMouseDown = function(evt) {
 		evt.preventDefault();
+		evt.target.style.cursor = 'move';
 		lineDragHandleState.dragging = true;
 		lineDragHandleState.x = evt.clientX;
 		lineDragHandleState.y = evt.clientY;
 		evt.target.setAttribute('fill', lineDragHandleMoveColor);
 		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
 	}
-	
-	
-	//*********
-	//    o Check that mouseover and mouseout are correct events, and 
-	//       assign them to handle
-	//    o In mouseout: disconnect mousemove.
-	//    o in mousemove: move the line
-	this.lineMoveHandleMouseOver= function(evt) {
-		evt.target.style.cursor = 'move';
-	}
-	
-	this.lineMoveHandleMouseOut = function(evt) {
-		evt.target.style.cursor = 'default';
-	}
-	
+		
 	this.lineMoveHandleMove = function(evt) {
 		evt.preventDefault();
 		if (lineDragHandleState.dragging) {
@@ -145,11 +134,12 @@ RegressionSim = function() {
 			lineDragHandle.y.baseVal.value = newY;
 			lineDragHandleState.y = newY;
 			
-			
+			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
 		}
 	}
 	
 	this.lineMoveHandleMouseUp = function(evt) {
+		evt.target.style.cursor = 'default';
 		lineDragHandleState.dragging = false;
 		lineDragHandleState.x = evt.clientX;
 		lineDragHandleState.y = evt.clientY;
@@ -169,7 +159,7 @@ RegressionSim = function() {
     	 */
     
     	if (xMax === undefined) {
-    		pixelxMax = xAxisLen;
+    		pixelxMax = xAxisWidth;
     	} else {
     		// Add one gridSize, b/c the y-axis is shifted
     		// right by one grid width to make room for the
@@ -177,25 +167,51 @@ RegressionSim = function() {
     		pixelxMax = gridSize + gridSize * xMax;
     	}
     	
-    	pixelIntercept = yAxisHeight - (gridSize * intercept);
-    	pixelSlope     = - slope;
+    	pixelIntercept = intercept2Pixels(intercept);
+    	pixelSlope     = slope2Pixels(slope);
+    	return drawFuncLineGivenPixelDims(pixelSlope, pixelIntercept, pixelxMax);
+    }
+    
+    var drawFuncLineGivenPixelDims = function(pixelSlope, pixelIntercept, pixelxMax) {
+
+    	if (pixelxMax === undefined) {
+    		pixelxMax = xAxisWidth;
+    	}
     	
-    	line = document.createElementNS(NS, 'line');
+    	if (line === null) {
+    		line = document.createElementNS(NS, 'line');
+    	}
     	line.setAttribute('stroke', 'black');
     	line.setAttribute('stroke-width', lineStrokeWidth);
     	line.setAttribute('x1', yAxisLeftPadding);
     	line.setAttribute('y1', pixelIntercept);
-    	line.setAttribute('x2', xMax);
-    	line.setAttribute('y2', pixelSlope * xMax + pixelIntercept);
+    	line.setAttribute('x2', pixelxMax);
+    	line.setAttribute('y2', pixelSlope * pixelxMax + pixelIntercept);
     	
-    	currCoordSlope      	= slope;
+    	currCoordSlope      	= pixels2Slope(pixelSlope);
     	currPixelCoordSlope 	= pixelSlope;
-    	currCoordIntercept      = intercept;
+    	currCoordIntercept      = pixels2Intercept(pixelIntercept);
     	currPixelCoordIntercept = pixelIntercept;
     	
     	return line;
     }
 	
+    var intercept2Pixels = function(intercept) {
+    	return yAxisHeight - (gridSize * intercept);
+    }
+    
+    var pixels2Intercept = function(pixelIntercept) {
+    	return Math.round((yAxisHeight - pixelIntercept) / gridSize);
+    }
+    
+    var slope2Pixels = function(slope) {
+    	return - slope;
+    }
+    
+    var pixels2Slope = function(pixelSlope) {
+    	return - pixelSlope;
+    }
+    
 	var makeCoordSys = function() {
 
 		var coordFld = document.createElementNS(NS,"svg");
@@ -350,6 +366,4 @@ regSim.setup();
 
 document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
-document.getElementById('lineDragHandle').addEventListener('change', regSim.lineMoveHandleMouseOver);
-document.getElementById('lineDragHandle').addEventListener('mouseout', regSim.lineMoveHandleMouseOut);
 
