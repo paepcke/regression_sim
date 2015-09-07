@@ -112,6 +112,7 @@ RegressionSim = function() {
 		lineDragHandleState.x = evt.clientX;
 		lineDragHandleState.y = evt.clientY;
 		evt.target.setAttribute('fill', lineDragHandleMoveColor);
+		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
 	}
 	
 	
@@ -120,12 +121,12 @@ RegressionSim = function() {
 	//       assign them to handle
 	//    o In mouseout: disconnect mousemove.
 	//    o in mousemove: move the line
-	this.lineMoveHandleMouseOver = function(evt) {
-		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
+	this.lineMoveHandleMouseOver= function(evt) {
+		evt.target.style.cursor = 'move';
 	}
 	
-	this.lineMoveHandleMouseOut= function(evt) {
-		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
+	this.lineMoveHandleMouseOut = function(evt) {
+		evt.target.style.cursor = 'default';
 	}
 	
 	this.lineMoveHandleMove = function(evt) {
@@ -153,6 +154,7 @@ RegressionSim = function() {
 		lineDragHandleState.x = evt.clientX;
 		lineDragHandleState.y = evt.clientY;
 		evt.target.setAttribute('fill', lineDragHandleRestColor);
+		document.getElementById('svgArea').removeEventListener('mousemove', regSim.lineMoveHandleMove);
 	}
 
 	
@@ -347,6 +349,7 @@ regSim = new RegressionSim();
 regSim.setup();
 
 document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
-document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
+document.getElementById('lineDragHandle').addEventListener('change', regSim.lineMoveHandleMouseOver);
+document.getElementById('lineDragHandle').addEventListener('mouseout', regSim.lineMoveHandleMouseOut);
 
