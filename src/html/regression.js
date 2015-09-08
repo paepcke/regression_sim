@@ -717,17 +717,31 @@ RegressionSim = function() {
 		 * updates the formulas.
 		 */
 		
+		// Clear the whole display table:
+		clearFormulas();
 		
-		var maePar  = document.getElementById('mae');
-		var msePar  = document.getElementById('mse');
-		var rmsePar = document.getElementById('rmse');
+		// The estimator names:
+		document.getElementById('maeNameCell').innerHTML  = 'mean absolute error (MEA)';
+		document.getElementById('mseNameCell').innerHTML  = 'mean squared error (MSE)';
+		document.getElementById('rmseNameCell').innerHTML = 'root mean squared error (RMSE)';
+
+		// Equal signs between estimator name and the sum terms:
+		document.getElementById('maeEqualsCell').innerHTML  = '=';
+		document.getElementById('mseEqualsCell').innerHTML  = '=';
+		document.getElementById('rmseEqualsCell').innerHTML = '=';
 		
-		var maeFormulaStr  = 'mean absolute error (MEA)      = ';
-		var mseFormulaStr  = 'mean squared error (MSE)       = ';
-		var rmseFormulaStr = 'root mean squared error (RMSE) = \
-			<span style="white-space: nowrap; font-size:larger">&radic;<span style="text-decoration:overline;">&nbsp;';
+		var maeSumCell  = document.getElementById('maeSumCell'); 
+		var mseSumCell  = document.getElementById('mseSumCell'); 
+		var rmseSumCell = document.getElementById('rmseSumCell'); 
 		
-		// Update the error values:
+		rmseSumCell.innerHTML = '<span style="white-space: nowrap; font-size:larger">&radic;<span style="text-decoration:overline;">&nbsp;';
+		
+		// Accumulate the sum terms:
+		var maeFormulaStr  = '';
+		var mseFormulaStr  = '';
+		var rmseFormulaStr = '';
+		
+		// Build the sum of terms part:
 		var errorEstimators = computeErrorEstimators();
 		for (var i=0; i<dataPtObjArr.length; i++) {
 			dataPtObj = dataPtObjArr[i];
@@ -740,17 +754,41 @@ RegressionSim = function() {
 			maeFormulaStr  += nxtError;
 			mseFormulaStr  += nxtError + '<sup>2</sup>';
 			rmseFormulaStr += nxtError + '<sup>2</sup>';
-			
-			
 		}
 		// Close the square root:
 		rmseFormulaStr += '&nbsp;</span>';
 		
-		// Update the page:
-		maePar.innerHTML  = maeFormulaStr;
-		msePar.innerHTML  = mseFormulaStr;
-		rmsePar.innerHTML = rmseFormulaStr;
-	}	
+		// Stick the sum terms into their table cells:
+		maeSumCell.innerHTML  = maeFormulaStr;
+		mseSumCell.innerHTML  = mseFormulaStr;
+		rmseSumCell.innerHTML = rmseFormulaStr;
+		
+		// The right-side equal signs:
+		document.getElementById('maeSumEqualsCell').innerHTML  = '=';
+		document.getElementById('mseSumEqualsCell').innerHTML  = '=';
+		document.getElementById('rmseSumEqualsCell').innerHTML = '=';
+
+		// The final results:
+		var estimators = computeErrorEstimators();
+		document.getElementById('maeTotalSumCell').innerHTML  = estimators.mae;
+		document.getElementById('mseTotalSumCell').innerHTML  = estimators.mse;
+		document.getElementById('rmseTotalSumCell').innerHTML = estimators.rmse;
+		
+	}
+	
+	var clearFormulas = function() {
+		/**
+		 * Clears the formula display, ensuring that every cell in the
+		 * display table is reset to an empty string.
+		 */
+		var table = document.getElementById('formulaTable');
+		for (var rowNum=0; rowNum<table.children.length; rowNum++) {
+			var row = table.children[rowNum];
+			for (var cellNum=0; cellNum<row.children.length; cellNum++) {
+				var cell = row.children.innerHTML = '';
+			}
+		}
+	}
 	
 	/*------------------------------- Number Crunching ------------- */
 
@@ -769,16 +807,19 @@ RegressionSim = function() {
 		var errSquaredSum = 0.0;
 		var nxtError;
 		for (var i=0; i<dataPtObjArr.length; i++) {
-			dataPtObj = dataPtObjArr[i];
+			var dataPtObj = dataPtObjArr[i];
 			nxtError = dataPtObj.getAttribute('errMagnitude');
-			errSum += nxtError;
-			errSquaredSum += nxtError * nxtError;
+			errSum += parseFloat(nxtError);
+			errSquaredSum += Math.pow(parseFloat(nxtError),2.0);
 		}
-		numDataPts = dataPtObjArr.length;
-		MAE  = (errSum/numDataPts).toFixed(1);
-		MSE  = errSquaredSum/numDataPts;
-		RMSE = Math.sqrt(MSE).toFixed(1);
-		MSE  = MSE.toFixed(1);
+		var numDataPts = dataPtObjArr.length;
+		var MAE  = (errSum/numDataPts).toFixed(1);
+		// Don't fix MSE to 1 decimal pt until
+		// it was used to compute the RMSE:
+		var MSE  = errSquaredSum/numDataPts;
+		var RMSE = Math.sqrt(MSE).toFixed(1);
+		// Reduce MSE to one decimal point:
+		var MSE  = MSE.toFixed(1);
 		return({'mae' : MAE, 'mse' : MSE, 'rmse' : RMSE});
 	}
 }

@@ -15,9 +15,29 @@
       </div> <!-- The error sums; will be filled in by regression.js -->
 
       <div id='errorFormulas'>
-	<p id='mae'  class='formulaLine'></p>
-	<p id='mse'  class='formulaLine'></p>
-	<p id='rmse' class='formulaLine'></p>
+	<table id='formulaTable' class='formulaTable'>
+	  <tr class='formula'>
+	    <td id='maeNameCell'></td>
+	    <td id='maeEqualsCell'></td>
+	    <td id='maeSumCell'></td>
+	    <td id='maeSumEqualsCell'></td>
+	    <td id='maeTotalSumCell'></td>
+	  </tr>
+	  <tr class='formula'>
+	    <td id='mseNameCell'></td>
+	    <td id='mseEqualsCell'></td>
+	    <td id='mseSumCell'></td>
+	    <td id='mseSumEqualsCell'></td>
+	    <td id='mseTotalSumCell'></td>
+	  </tr>
+	  <tr class='formula'>
+	    <td id='rmseNameCell'></td>
+	    <td id='rmseEqualsCell'></td>
+	    <td id='rmseSumCell'></td>
+	    <td id='rmseSumEqualsCell'></td>
+	    <td id='rmseTotalSumCell'></td>
+	  </tr>
+	</table>
       </div>
     </div>
     <script src="regression.js"></script>
