@@ -114,8 +114,19 @@ RegressionSim = function() {
 		yLabel.setAttribute('x', 0);
 		yLabel.setAttribute('y', yLabelBox.width - halfGridS - 5);
 		
+	
+		// Draw the datapoints so that their error
+		// lines are below the function line, which we
+		// will draw below:
+		dataPtSpecArr = [{'x' : 4, 'y' : 13, 'id' : 'pt1'},
+		                 {'x' : 8, 'y' : 9, 'id' : 'pt2'},
+		                 {'x' : 15, 'y' : 12, 'id' : 'pt3'},
+		                 ];
+		placeDataPoints(dataPtSpecArr);
+		
 		// Draw the initial function line:
 		line = drawFuncLine(currCoordSlope, currCoordIntercept);
+		adjustErrorLines(currCoordSlope, currCoordIntercept);
 		svgArea.appendChild(line);
 		
 		// Draw line drag handle:
@@ -128,12 +139,6 @@ RegressionSim = function() {
 		svgArea.appendChild(rotateHandle);
 		rotateHandleState.x = rotateHandle.x.baseVal.value;
 		rotateHandleState.y = rotateHandle.y.baseVal.value;
-		
-		dataPtSpecArr = [{'x' : 4, 'y' : 13, 'id' : 'pt1'},
-		                 {'x' : 8, 'y' : 9, 'id' : 'pt2'},
-		                 {'x' : 15, 'y' : 12, 'id' : 'pt3'},
-		                 ];
-		placeDataPoints(dataPtSpecArr);
 	}
 	
 	this.lineMoveHandleMouseDown = function(evt) {
@@ -167,7 +172,7 @@ RegressionSim = function() {
 			
 			newXY = moveRotateHandle(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
-			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept)
+			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
 		}
 	}
 	
@@ -217,9 +222,8 @@ RegressionSim = function() {
 			currPixelCoordSlope = newPixelSlope;
 			currCoordSlope      = newSlope;
 			
-			// 
-			
 			drawFuncLineGivenPixelDims(newPixelSlope, currPixelCoordIntercept);
+			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);			
 		}
 	}
 	
@@ -483,57 +487,87 @@ RegressionSim = function() {
 		 * if they do exist. Units are user level coord system.
 		 */
 		var errLine;
+		var ptCircle;
 		var arrLen = ptCoordArray.length;
 		for (var i=0; i<arrLen;  i++) {
 			
 			var ptSpec = ptCoordArray[i];
 			// Does datapoint already exist?:
-			var ptObj = document.getElementById(ptSpec.id);
-			if (ptObj === null) {
-				// No: create the point
-				ptObj = document.createElementNS(NS, 'circle');
+			var ptErrLineGrp = document.getElementById(ptSpec.id);
+			if (ptErrLineGrp === null) {
+				// No: create the point/errLine group:
+				var ptErrLineGrp = document.createElementNS(NS, 'g');
+				ptErrLineGrp.setAttribute('id', ptSpec.id);
+				
+				// Add a cirlce as a child:
+				ptCircle =  document.createElementNS(NS, 'circle');
 				
 				// Add an error line as a child:
 				errLine = document.createElementNS(NS, 'line');
-				svgArea.appendChild(errLine);
+				errLine.setAttribute('stroke', 'red');
+				errLine.setAttribute('stroke-width', 3);
+
+				// Add circle and error line to the group,
+				// putting the err line first to be under
+				// the circle:
+				
+				ptErrLineGrp.appendChild(errLine);
+				ptErrLineGrp.appendChild(ptCircle);
 				
 				// Show the point:
-				svgArea.appendChild(ptObj);
-				dataPtObjArr.push(ptObj);
+				svgArea.appendChild(ptErrLineGrp);
+				dataPtObjArr.push(ptErrLineGrp);
 			}
+			ptCircle = ptObjCircle(ptErrLineGrp);
 			var pixelPt = coordPt2Pixels(ptSpec.x, ptSpec.y);
-			ptObj.setAttribute('cx', pixelPt.x);
-			ptObj.setAttribute('cy', pixelPt.y);
-			ptObj.setAttribute('r', dataPtRadius);
-			ptObj.setAttribute('fill', dataPtFill);
-			ptObj.setAttribute('stroke', dataPtStroke);
+			ptCircle.setAttribute('cx', pixelPt.x);
+			ptCircle.setAttribute('cy', pixelPt.y);
+			ptCircle.setAttribute('r', dataPtRadius);
+			ptCircle.setAttribute('fill', dataPtFill);
+			ptCircle.setAttribute('stroke', dataPtStroke);
 			
-			errLine = ptObj.children[0];
-			errLine.x1.baseVal.value = ptObj.cx.baseVal.value;
-			errLine.y1.baseVal.value = ptObj.cy.baseVal.value;
-			errLine.x2.baseVal.value = ptObj.cx.baseVal.value;
-			//****errLine.y2.baseVal.value = ptObj.cy.baseVal.value; // end pt on top of start pt.
-			errLine.y2.baseVal.value = 200; // end pt on top of start pt.
+			errLine = ptObjErrLine(ptErrLineGrp);
+			errLine.x1.baseVal.value = ptCircle.cx.baseVal.value;
+			errLine.y1.baseVal.value = ptCircle.cy.baseVal.value;
+			errLine.x2.baseVal.value = ptCircle.cx.baseVal.value;
+			errLine.y2.baseVal.value = ptCircle.cy.baseVal.value; // end pt on top of start pt.
 			errLine.style.color = 'red';
 			errLine.style.strokeWidth = errLineStrokeWidth;
 		}
-		adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+		if (currPixelCoordSlope !== undefined && currPixelCoordIntercept !== undefined) {
+			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+		}
 	}
 	
 	var adjustErrorLines = function(pixelSlope, pixelIntercept) {
 		for (var i=0; i<dataPtObjArr.length; i++) {
+			// Get one group: circle/errLine:
 			var dataObj = dataPtObjArr[i];
-			var pixelX  = dataObj.cx.baseVal.value;
-			var pixelY  = dataObj.cy.baseVal.value;
+			var dataCircle = ptObjCircle(dataObj);
+			var pixelX  = dataCircle.cx.baseVal.value;
+			var pixelY  = dataCircle.cy.baseVal.value;
 			var lineY   = solveEquation(pixelX);
 			var errorLen = lineY - pixelY;
-			// Get the point's (only) child: an error line:
-			var errLine = dataObj.children[0];
-			//***** Check what happens when line is above/below datapoint:
-			errLine.setAttribute('y2', lineY);
+			// Get the point's error line:
+			var errLine = ptObjErrLine(dataObj);
+			
+			// Set the error line length, taking account
+			// of the line starting in the middle of the
+			// data point circle, and ending in the middle
+			// of the line:
+			var correction = Math.round(lineStrokeWidth / 2) + Math.round(dataPtRadius/2); 
+			errLine.setAttribute('y2', lineY + correction);
 		}
 	}
 	
+	var ptObjCircle = function(dataPtGrp) {
+		return dataPtGrp.children[1];
+	}
+	
+	var ptObjErrLine= function(dataPtGrp) {
+		return dataPtGrp.children[0];
+	}
+
 	var solveEquation = function(pixelX) {
 		return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
 	}
