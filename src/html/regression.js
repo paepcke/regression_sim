@@ -60,9 +60,15 @@ RegressionSim = function() {
 	var rotateHandleState = {'x' : 0, 'y' : 0, 'dragging' : false};
 
 	
+	// Array of objs: {'x' : <val>, 'y' : <val>, 'id' : <val>}:
+	var dataPtSpecArr = [];
+	// Array of SVG data point objects:
+	var dataPtObjArr  = [];
 	var dataPtRadius  = 10; // pixels
 	var dataPtFill    = 'darkblue';
 	var dataPtStroke  = 'yellow';
+	
+	var errLineStrokeWidth = 2;	
 	
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
@@ -123,12 +129,11 @@ RegressionSim = function() {
 		rotateHandleState.x = rotateHandle.x.baseVal.value;
 		rotateHandleState.y = rotateHandle.y.baseVal.value;
 		
-		createDataPoints([{'x' : 4, 'y' : 13, 'id' : 'pt1'},
-		                  {'x' : 8, 'y' : 9, 'id' : 'pt2'},
-		                  {'x' : 15, 'y' : 12, 'id' : 'pt3'},
-		                  ]
-		);
-		
+		dataPtSpecArr = [{'x' : 4, 'y' : 13, 'id' : 'pt1'},
+		                 {'x' : 8, 'y' : 9, 'id' : 'pt2'},
+		                 {'x' : 15, 'y' : 12, 'id' : 'pt3'},
+		                 ];
+		placeDataPoints(dataPtSpecArr);
 	}
 	
 	this.lineMoveHandleMouseDown = function(evt) {
@@ -470,19 +475,30 @@ RegressionSim = function() {
 		return handle;
 	}
 	
-	var createDataPoints = function(ptCoordArray) {
+	var placeDataPoints = function(ptCoordArray) {
 		/**
 		 * Given an array of {'x' : <num>, 'y' : <num> 'id' : <id>},
 		 * draw those points if they don't exist, or move them
 		 * if they do exist. Units are user level coord system.
 		 */
+		var errLine;
 		var arrLen = ptCoordArray.length;
 		for (var i=0; i<arrLen;  i++) {
+			
 			var ptSpec = ptCoordArray[i];
+			// Does datapoint already exist?:
 			var ptObj = document.getElementById(ptSpec.id);
 			if (ptObj === null) {
+				// No: create the point
 				ptObj = document.createElementNS(NS, 'circle');
+				
+				// Add an error line as a child:
+				errLine = document.createElementNS(NS, 'line');
+				ptObj.appendChild(errLine);
+				
+				// Show the point:
 				svgArea.appendChild(ptObj);
+				dataPtObjArr.push(ptObj);
 			}
 			var pixelPt = coordPt2Pixels(ptSpec.x, ptSpec.y);
 			ptObj.setAttribute('cx', pixelPt.x);
@@ -490,7 +506,34 @@ RegressionSim = function() {
 			ptObj.setAttribute('r', dataPtRadius);
 			ptObj.setAttribute('fill', dataPtFill);
 			ptObj.setAttribute('stroke', dataPtStroke);
+			
+			errLine = ptObj.children[0];
+			errLine.x1.baseVal.value = ptObj.cx.baseVal.value;
+			errLine.y1.baseVal.value = ptObj.cy.baseVal.value;
+			errLine.x2.baseVal.value = ptObj.cx.baseVal.value;
+			errLine.y2.baseVal.value = ptObj.cy.baseVal.value; // end pt on top of start pt.
+			errLine.setAttribute('color', 'red');
+			errLine.setAttribute('stroke-width', errLineStrokeWidth);
 		}
+		adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+	}
+	
+	var adjustErrorLines = function(pixelSlope, pixelIntercept) {
+		for (var i=0; i<dataPtObjArr.length; i++) {
+			var dataObj = dataPtObjArr[i];
+			var pixelX  = dataObj.cx.baseVal.value;
+			var pixelY  = dataObj.cy.baseVal.value;
+			var lineY   = solveEquation(pixelX);
+			var errorLen = lineY - pixelY;
+			// Get the point's (only) child: an error line:
+			var errLine = dataObj.children[0];
+			//***** Check what happens when line is above/below datapoint:
+			errLine.setAttribute('y2', lineY);
+		}
+	}
+	
+	var solveEquation = function(pixelX) {
+		return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
 	}
 	
 	var computeRotHandlePixelCoords = function() {
