@@ -737,23 +737,36 @@ RegressionSim = function() {
 		rmseSumCell.innerHTML = '<span style="white-space: nowrap; font-size:larger">&radic;<span style="text-decoration:overline;">&nbsp;';
 		
 		// Accumulate the sum terms:
-		var maeFormulaStr  = '';
-		var mseFormulaStr  = '';
-		var rmseFormulaStr = '';
+		var firstErr = dataPtObjArr[0].getAttribute('errMagnitude');
+		var maeFormulaStr  = firstErr;
+		if (firstErr < 0) {
+			var mseFormulaStr  = '(' + firstErr + ')<sup>2</sup>';
+			var rmseFormulaStr = '(' + firstErr + ')<sup>2</sup>';
+		} else {
+			var mseFormulaStr   = firstErr + '<sup>2</sup>';
+			var rmseFormulaStr  = firstErr + '<sup>2</sup>';
+		}
 		
 		// Build the sum of terms part:
 		var errorEstimators = computeErrorEstimators();
-		for (var i=0; i<dataPtObjArr.length; i++) {
+		
+		for (var i=1; i<dataPtObjArr.length; i++) {
 			dataPtObj = dataPtObjArr[i];
 			nxtError = dataPtObj.getAttribute('errMagnitude');
 			if (i != 0) {
-				maeFormulaStr  += ' + ';
-				mseFormulaStr  += ' + ';
-				rmseFormulaStr += ' + ';
+				if (nxtError > 0) {
+					maeFormulaStr  += ' + ' + nxtError;
+					mseFormulaStr  += ' + ' + nxtError + '<sup>2</sup>';
+					rmseFormulaStr += ' + ' + nxtError + '<sup>2</sup>';
+				} else {
+					maeFormulaStr  += ' - ' + Math.abs(nxtError);
+					mseFormulaStr  += ' + ' + '(-' + Math.abs(nxtError) + ')' + '<sup>2</sup>';
+					rmseFormulaStr += ' + ' + '(-' + Math.abs(nxtError) + ')' + '<sup>2</sup>';
+				}
 			}
-			maeFormulaStr  += nxtError;
-			mseFormulaStr  += nxtError + '<sup>2</sup>';
-			rmseFormulaStr += nxtError + '<sup>2</sup>';
+			//****maeFormulaStr  += Math.abs(nxtError);
+			//****mseFormulaStr  += Math.abs(nxtError) + '<sup>2</sup>';
+			//****rmseFormulaStr += Math.abs(nxtError) + '<sup>2</sup>';
 		}
 		// Close the square root:
 		rmseFormulaStr += '&nbsp;</span>';
