@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8"/>
-</head>
-<body id="regressionBody">
+  <head>
+    <meta charset="utf-8" />
+    <LINK href="regression.css" rel="stylesheet" type="text/css">
+  </head>
+  <body id="regressionBody">
 
-<div id="simDiv">
+    <div id='allWrapper'>
+      <div id="simDiv">
 
-<svg id="svgArea" 
-	 xmlns="http://www.w3.org/2000/svg"
-	 xmlns:xlink="http://www.w3.org/1999/xlink" 
- 	 width="500" 
-   	 height="500">
-</svg>
-</div>
+	<svg id="svgArea" xmlns="http://www.w3.org/2000/svg"
+	     xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="500">
+	</svg>
+      </div> <!-- The error sums; will be filled in by regression.js -->
 
-<script src="regression.js"></script>
-</body>
+      <div id='errorFormulas'>
+	<p id='mae'  class='formulaLine'></p>
+	<p id='mse'  class='formulaLine'></p>
+	<p id='rmse' class='formulaLine'></p>
+      </div>
+    </div>
+    <script src="regression.js"></script>
+  </body>
 </html>

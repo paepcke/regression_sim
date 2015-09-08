@@ -72,6 +72,12 @@ RegressionSim = function() {
 	// Horizontal space between error line and its numeric value text:
 	var errMagPadding = 4
 	
+	// Error quantities: mean absolute error, mean square error,
+	// and root mean square error:
+	var MEA;
+	var MSE;
+	var RMSE;
+	
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
 	}();
@@ -141,6 +147,8 @@ RegressionSim = function() {
 		svgArea.appendChild(rotateHandle);
 		rotateHandleState.x = rotateHandle.x.baseVal.value;
 		rotateHandleState.y = rotateHandle.y.baseVal.value;
+		
+		adjustErrFomulas();
 	}
 	
 	this.lineMoveHandleMouseDown = function(evt) {
@@ -175,6 +183,7 @@ RegressionSim = function() {
 			newXY = moveRotateHandle(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+			adjustErrFomulas();
 		}
 	}
 	
@@ -225,7 +234,8 @@ RegressionSim = function() {
 			currCoordSlope      = newSlope;
 			
 			drawFuncLineGivenPixelDims(newPixelSlope, currPixelCoordIntercept);
-			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);			
+			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+			adjustErrFomulas();
 		}
 	}
 	
@@ -565,6 +575,7 @@ RegressionSim = function() {
 		}
 		if (currPixelCoordSlope !== undefined && currPixelCoordIntercept !== undefined) {
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+			adjustErrFomulas();			
 		}
 	}
 	
@@ -594,10 +605,12 @@ RegressionSim = function() {
 			
 			// Convert the pixel error magnitude to 
 			// coord sys:
-			
-			var errorLenCoord = errorLen / gridSize;
+			var errorLenCoord = (errorLen / gridSize).toFixed(1);
 			// Set the error magnitude text:
-			errMagTxt.textContent = errorLenCoord.toFixed(1);
+			errMagTxt.textContent = errorLenCoord;
+			// Set (or initially add) the error magnitude to
+			// the point object group:
+			dataObj.setAttribute('errMagnitude', errorLenCoord);
 		}
 	}
 	
@@ -694,6 +707,79 @@ RegressionSim = function() {
 		arrHeadPath = document.getElementById('arrowHeadPath')
 	    arrHeadPath.setAttribute('opacity', opacity);
 
+	}
+	
+	/*------------------------------- Error equation creation/updates ------------- */
+
+	var adjustErrFomulas = function() {
+		/**
+		 * Gets the error residual magnitudes, and 
+		 * updates the formulas.
+		 */
+		
+		
+		var maePar  = document.getElementById('mae');
+		var msePar  = document.getElementById('mse');
+		var rmsePar = document.getElementById('rmse');
+		
+		var maeFormulaStr  = 'mean absolute error (MEA)      = ';
+		var mseFormulaStr  = 'mean squared error (MSE)       = ';
+		var rmseFormulaStr = 'root mean squared error (RMSE) = \
+			<span style="white-space: nowrap; font-size:larger">&radic;<span style="text-decoration:overline;">&nbsp;';
+		
+		// Update the error values:
+		var errorEstimators = computeErrorEstimators();
+		for (var i=0; i<dataPtObjArr.length; i++) {
+			dataPtObj = dataPtObjArr[i];
+			nxtError = dataPtObj.getAttribute('errMagnitude');
+			if (i != 0) {
+				maeFormulaStr  += ' + ';
+				mseFormulaStr  += ' + ';
+				rmseFormulaStr += ' + ';
+			}
+			maeFormulaStr  += nxtError;
+			mseFormulaStr  += nxtError + '<sup>2</sup>';
+			rmseFormulaStr += nxtError + '<sup>2</sup>';
+			
+			
+		}
+		// Close the square root:
+		rmseFormulaStr += '&nbsp;</span>';
+		
+		// Update the page:
+		maePar.innerHTML  = maeFormulaStr;
+		msePar.innerHTML  = mseFormulaStr;
+		rmsePar.innerHTML = rmseFormulaStr;
+	}	
+	
+	/*------------------------------- Number Crunching ------------- */
+
+	var computeErrorEstimators = function() {
+		/**
+		 * Goes through all the data points, expecting that
+		 * they hold an attribute 'errMagnitude' with the error
+		 * amount in coordinate system units. Populates class
+		 * variables MAE, MSE, and RMSE.
+		 * 
+		 * In addition, returns an object with properties
+		 * 'mae', 'mse', and 'rmse'.
+		 */
+		
+		var errSum = 0.0;
+		var errSquaredSum = 0.0;
+		var nxtError;
+		for (var i=0; i<dataPtObjArr.length; i++) {
+			dataPtObj = dataPtObjArr[i];
+			nxtError = dataPtObj.getAttribute('errMagnitude');
+			errSum += nxtError;
+			errSquaredSum += nxtError * nxtError;
+		}
+		numDataPts = dataPtObjArr.length;
+		MAE  = (errSum/numDataPts).toFixed(1);
+		MSE  = errSquaredSum/numDataPts;
+		RMSE = Math.sqrt(MSE).toFixed(1);
+		MSE  = MSE.toFixed(1);
+		return({'mae' : MAE, 'mse' : MSE, 'rmse' : RMSE});
 	}
 }
 
