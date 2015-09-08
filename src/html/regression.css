@@ -1,0 +1,20 @@
+#allWrapper {
+    border : 1px solid blue;
+}
+
+#simDiv {
+    display : inline-block;
+    border  : 1px solid green;
+}
+
+#errorFormulas {
+    display    : inline-block;
+    border     : 1px solid green;
+    vertical-align : top;
+}
+
+tr.formula {
+    font-size  	  : 24px;
+    margin-top    : 0em;
+    //margin-bottom : -0.1em;
+}
