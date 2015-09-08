@@ -167,6 +167,7 @@ RegressionSim = function() {
 			
 			newXY = moveRotateHandle(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
+			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept)
 		}
 	}
 	
@@ -494,7 +495,7 @@ RegressionSim = function() {
 				
 				// Add an error line as a child:
 				errLine = document.createElementNS(NS, 'line');
-				ptObj.appendChild(errLine);
+				svgArea.appendChild(errLine);
 				
 				// Show the point:
 				svgArea.appendChild(ptObj);
@@ -511,9 +512,10 @@ RegressionSim = function() {
 			errLine.x1.baseVal.value = ptObj.cx.baseVal.value;
 			errLine.y1.baseVal.value = ptObj.cy.baseVal.value;
 			errLine.x2.baseVal.value = ptObj.cx.baseVal.value;
-			errLine.y2.baseVal.value = ptObj.cy.baseVal.value; // end pt on top of start pt.
-			errLine.setAttribute('color', 'red');
-			errLine.setAttribute('stroke-width', errLineStrokeWidth);
+			//****errLine.y2.baseVal.value = ptObj.cy.baseVal.value; // end pt on top of start pt.
+			errLine.y2.baseVal.value = 200; // end pt on top of start pt.
+			errLine.style.color = 'red';
+			errLine.style.strokeWidth = errLineStrokeWidth;
 		}
 		adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
 	}
