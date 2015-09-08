@@ -68,7 +68,9 @@ RegressionSim = function() {
 	var dataPtFill    = 'darkblue';
 	var dataPtStroke  = 'yellow';
 	
-	var errLineStrokeWidth = 2;	
+	var errLineStrokeWidth = 2;
+	// Horizontal space between error line and its numeric value text:
+	var errMagPadding = 4
 	
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
@@ -488,6 +490,7 @@ RegressionSim = function() {
 		 */
 		var errLine;
 		var ptCircle;
+		var errMagTxt;
 		var arrLen = ptCoordArray.length;
 		for (var i=0; i<arrLen;  i++) {
 			
@@ -499,25 +502,35 @@ RegressionSim = function() {
 				var ptErrLineGrp = document.createElementNS(NS, 'g');
 				ptErrLineGrp.setAttribute('id', ptSpec.id);
 				
-				// Add a cirlce as a child:
+				// Make the circle of the data point:
 				ptCircle =  document.createElementNS(NS, 'circle');
 				
-				// Add an error line as a child:
+				// Create an error line to go with the point:
 				errLine = document.createElementNS(NS, 'line');
 				errLine.setAttribute('stroke', 'red');
 				errLine.setAttribute('stroke-width', 3);
+				
+				// Make an error number text element for the
+				// data point. Its position will be set later in
+				// this method:
+				errMagTxt = document.createElementNS(NS, 'text');
+				errMagTxt.setAttribute('fill', 'red');
+				errMagTxt.textContent = '000';				
 
 				// Add circle and error line to the group,
 				// putting the err line first to be under
 				// the circle:
 				
 				ptErrLineGrp.appendChild(errLine);
+				ptErrLineGrp.appendChild(errMagTxt);
 				ptErrLineGrp.appendChild(ptCircle);
 				
 				// Show the point:
 				svgArea.appendChild(ptErrLineGrp);
 				dataPtObjArr.push(ptErrLineGrp);
 			}
+			
+			// Style and position the circle:
 			ptCircle = ptObjCircle(ptErrLineGrp);
 			var pixelPt = coordPt2Pixels(ptSpec.x, ptSpec.y);
 			ptCircle.setAttribute('cx', pixelPt.x);
@@ -526,6 +539,7 @@ RegressionSim = function() {
 			ptCircle.setAttribute('fill', dataPtFill);
 			ptCircle.setAttribute('stroke', dataPtStroke);
 			
+			// Style and position the error line:
 			errLine = ptObjErrLine(ptErrLineGrp);
 			errLine.x1.baseVal.value = ptCircle.cx.baseVal.value;
 			errLine.y1.baseVal.value = ptCircle.cy.baseVal.value;
@@ -533,6 +547,21 @@ RegressionSim = function() {
 			errLine.y2.baseVal.value = ptCircle.cy.baseVal.value; // end pt on top of start pt.
 			errLine.style.color = 'red';
 			errLine.style.strokeWidth = errLineStrokeWidth;
+			
+			// Style and position the error magnitude text element
+			// to the left of the error line:
+			errMagTxt    = ptObjMagTxt(ptErrLineGrp);
+			// Length of err line:
+			var magnitude    = errLine.y2.baseVal.value - errLine.y1.baseVal.value;
+			// String version of magnitude with one decimal point:
+			var magnitudeStr = magnitude.toFixed(1).toString();
+			var magStrPixelWidth = pixelsInEm(errMagTxt) * magnitudeStr.length;
+			errMagTxt.setAttribute('x', errLine.x1.baseVal.value - magStrPixelWidth - errMagPadding);
+			// Want text half-way down the error line:
+			var errMagStrYPos =  errLine.y1.baseVal.value + Math.round(magnitude / 2);
+			errMagTxt.setAttribute('y', errMagStrYPos);
+			errMagTxt.textContent = magnitude.toString();
+			
 		}
 		if (currPixelCoordSlope !== undefined && currPixelCoordIntercept !== undefined) {
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
@@ -543,33 +572,60 @@ RegressionSim = function() {
 		for (var i=0; i<dataPtObjArr.length; i++) {
 			// Get one group: circle/errLine:
 			var dataObj = dataPtObjArr[i];
+			// Get the data point's circle, error line, 
+			// and err magnitude txt element:
 			var dataCircle = ptObjCircle(dataObj);
+			var errLine    = ptObjErrLine(dataObj);
+			var errMagTxt  = ptObjMagTxt(dataObj);
+			
 			var pixelX  = dataCircle.cx.baseVal.value;
 			var pixelY  = dataCircle.cy.baseVal.value;
 			var lineY   = solveEquation(pixelX);
-			var errorLen = lineY - pixelY;
-			// Get the point's error line:
-			var errLine = ptObjErrLine(dataObj);
+			var errorLen = lineY - pixelY + Math.round(dataPtRadius / 2);
 			
 			// Set the error line length, taking account
 			// of the line starting in the middle of the
 			// data point circle, and ending in the middle
 			// of the line:
-			var correction = Math.round(lineStrokeWidth / 2) + Math.round(dataPtRadius/2); 
+			//****var correction = Math.round(lineStrokeWidth / 2) + Math.round(dataPtRadius/2); 
+			//****var correction = Math.round(dataPtRadius/2);
+			var correction = 0;
 			errLine.setAttribute('y2', lineY + correction);
+			
+			// Convert the pixel error magnitude to 
+			// coord sys:
+			
+			var errorLenCoord = errorLen / gridSize;
+			// Set the error magnitude text:
+			errMagTxt.textContent = errorLenCoord.toFixed(1);
 		}
 	}
 	
 	var ptObjCircle = function(dataPtGrp) {
-		return dataPtGrp.children[1];
+		return dataPtGrp.children[2];
 	}
 	
 	var ptObjErrLine= function(dataPtGrp) {
 		return dataPtGrp.children[0];
 	}
 
+	var ptObjMagTxt = function(dataPtGrp) {
+		return dataPtGrp.children[1];
+	}
+
+	
 	var solveEquation = function(pixelX) {
 		return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
+	}
+	
+	var pixelsInEm = function(parentElement) {
+		/**
+		 * Given an optional parent element, return the width
+		 * of one em in pixels. If parentElement is not provided,
+		 * uses document.body.
+		 */
+		parentElement = parentElement || document.body;
+		return Number(getComputedStyle(parentElement, "").fontSize.match(/(\d*(\.\d*)?)px/)[1]);		
 	}
 	
 	var computeRotHandlePixelCoords = function() {
