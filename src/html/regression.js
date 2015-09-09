@@ -80,7 +80,22 @@ RegressionSim = function() {
 	var MEA;
 	var MSE;
 	var RMSE;
+	
+	// The minima for each of mae/mse/rmse. Computed
+	// in setup.py via computeErrorEstimators:
+	var minMae;
+	var minMsa;
+	var minRmsa;
+	
+	var theMBForMinMae  = null;
+	var theMBForMinMse  = null;
+	var theMBForMinRmse = null;
 
+	// Array of objects that hold the mae/mse/rmse
+	// for every pair of m and b. Set by setup()
+	// via computeErrorEstimators:
+	var resMatrix;
+	
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
 	}();
@@ -150,6 +165,22 @@ RegressionSim = function() {
 		svgArea.appendChild(rotateHandle);
 		rotateHandleState.x = rotateHandle.x.baseVal.value;
 		rotateHandleState.y = rotateHandle.y.baseVal.value;
+		
+		// Compute the minima for mae/mse/rmse, and 
+		// the matrix of all mae/mse/rmse for every 
+		// pair of m/b. The function returns:
+		//     {
+		// 		'minMae'  : minMae,
+		//		'minMse'  : minMse,
+		//		'minRmse' : minRmse,
+		//		'resMatrix' : resMatrix
+		//     }
+
+		var res = computeErrorEstimators();
+		minMae  = res.minMae;
+		minMse  = res.minMse;
+		minRmse = res.minRmse;
+		resMatrix = res.resMatrix;
 		
 		adjustErrFomulas();
 	}
@@ -804,12 +835,6 @@ RegressionSim = function() {
 			maeSumCell.innerHTML  = '$' + maeFormulaStr + '$';
 			mseSumCell.innerHTML  = '$' + mseFormulaStr + '$';
 			rmseSumCell.innerHTML = '$' + rmseFormulaStr + '$';
-
-			// The final estimator result:
-			document.getElementById('maeTotalSumCell').innerHTML  = '$' + estimators.mae  + '$';
-			document.getElementById('mseTotalSumCell').innerHTML  = '$' + estimators.mse  + '$';
-			document.getElementById('rmseTotalSumCell').innerHTML = '$' + estimators.rmse + '$';
-			
 		} else {
 			// Ask MathJax to replace the sums terms:
 			maeSumsMath = maeSumsMath[0];
@@ -820,16 +845,12 @@ RegressionSim = function() {
 			// RMSE sums:
 			var rmseSumsMath = MathJax.Hub.getAllJax("rmseSumCell")[0]
 			MathJax.Hub.Queue(["Text",rmseSumsMath,rmseFormulaStr]);
-			
-			var totalMaeMath = MathJax.Hub.getAllJax("maeTotalSumCell")[0]
-			MathJax.Hub.Queue(["Text",totalMaeMath, estimators.mae]);
-			
-			var totalMseMath = MathJax.Hub.getAllJax("mseTotalSumCell")[0]
-			MathJax.Hub.Queue(["Text",totalMseMath, estimators.mse]);
-
-			var totalRmseMath = MathJax.Hub.getAllJax("rmseTotalSumCell")[0]
-			MathJax.Hub.Queue(["Text",totalRmseMath, estimators.rmse]);
 		}
+		
+		// The final estimator result:
+		document.getElementById('maeTotalSumCell').innerHTML  = estimators.mae;
+		document.getElementById('mseTotalSumCell').innerHTML  = estimators.mse;
+		document.getElementById('rmseTotalSumCell').innerHTML = estimators.rmse;
 	}
 	
 	/*------------------------------- Number Crunching ------------- */
@@ -867,8 +888,23 @@ RegressionSim = function() {
 	
 	this.findMinima = function() {
 		
-		// Array containing objects with fields:
-		//   'b', 'm', 'mae', 'mse', 'rmse': 
+		/**
+		 * Creates array containing objects with fields:
+		 *      'm', 'b', 'mae', 'mse', 'rmse'.
+		 *
+		 * Returns:
+		 *     {
+ 	     *      'minMae'  : minMae,
+		 *  	'minMse'  : minMse,
+		 *  	'minRmse' : minRmse,
+		 *  	'resMatrix' : resMatrix
+		 *     }
+		 *     
+		 *  where 'resMatrix is the array of objects as per above.
+		 *  The array is sorted by m, then b.
+		 */
+		
+		
 		var resMatrix = [];
 
 		// Currently minimal measures:
@@ -931,6 +967,88 @@ RegressionSim = function() {
 				'minRmse' : minRmse,
 				'resMatrix' : resMatrix
 		};
+		
+		var mbForMinMae = function() {
+			/**
+			 * Return {'m' : <slope>, 'b' : <intercept>} that 
+			 * minimize the MAE. We assume that computeErrorEstimators()
+			 * was already called, and that instance var resMatrix 
+			 * contains an array of:
+			 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+			 *    
+			 * and that instance var minMae contains the minimum.
+			 */
+			
+			if (theMBForMinMae === null) {
+				for (var i=0; i<resMatrix.length; i++) {
+					if (resMatrix[i].mae == minMae) {
+						varResEntry = resMatrix[i]; 
+						theMBForMinMae = {'m' : resEntry.m, 'b' : reEntry.b};
+						return theMBForMinMae;
+					}
+				}
+			} else{
+				return theMBForMinMae;
+			}
+			
+		}
+
+		var mbForMinMse = function() {
+			/**
+			 * Return {'m' : <slope>, 'b' : <intercept>} that 
+			 * minimize the MSE. We assume that computeErrorEstimators()
+			 * was already called, and that instance var resMatrix 
+			 * contains an array of:
+			 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+			 *    
+			 * and that instance var minMse contains the minimum.
+			 */
+			
+			if (theMBForMinMse === null) {
+				for (var i=0; i<resMatrix.length; i++) {
+					if (resMatrix[i].mse == minMse) {
+						varResEntry = resMatrix[i];
+						theMBForMinMse = {'m' : resEntry.m, 'b' : reEntry.b};
+						return theMBForMinMse;
+					}
+				}
+			} else {
+				return theMBForMinMse;
+			}
+		}
+
+		var mbForMinRmse = function() {
+			/**
+			 * Return {'m' : <slope>, 'b' : <intercept>} that 
+			 * minimize the RMSE. We assume that computeErrorEstimators()
+			 * was already called, and that instance var resMatrix 
+			 * contains an array of:
+			 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+			 *    
+			 * and that instance var minRmse contains the minimum.
+			 */
+			
+			if (theMBForMinRmse === null) {
+				for (var i=0; i<resMatrix.length; i++) {
+					if (resMatrix[i].rmse == minRmse) {
+						varResEntry = resMatrix[i];
+						theMBForMinRmse = {'m' : resEntry.m, 'b' : reEntry.b};;
+						return theMBForMinRmse;
+					}
+				}
+			} else {
+				return theMBForMinRmse;
+			}
+			
+		}
+
+		var minimaForMB = function(m, b) {
+			/**
+			 * Given a slope and intercept, return:
+			 *    {'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+			 */
+		*******	
+		}
 	}
 }
 
