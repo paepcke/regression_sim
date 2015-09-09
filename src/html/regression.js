@@ -183,11 +183,11 @@ RegressionSim = function() {
 			newXY = moveRotateHandle(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
-			adjustErrFomulas();
 		}
 	}
 	
 	this.lineMoveHandleMouseUp = function(evt) {
+		adjustErrFomulas();
 		evt.target.style.cursor = 'default';
 		lineDragHandleState.dragging = false;
 		lineDragHandleState.x = evt.clientX;
@@ -235,7 +235,6 @@ RegressionSim = function() {
 			
 			drawFuncLineGivenPixelDims(newPixelSlope, currPixelCoordIntercept);
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
-			adjustErrFomulas();
 		}
 	}
 	
@@ -284,6 +283,7 @@ RegressionSim = function() {
 	}
 	
 	this.rotateHandleMouseUp = function(evt) {
+		adjustErrFomulas();
 		evt.target.style.cursor = 'default';
 		rotateHandleState.dragging = false;
 		rotateHandle.setAttribute('fill', rotateHandleRestColor);
