@@ -724,9 +724,9 @@ RegressionSim = function() {
 		var mseSumCell  = document.getElementById('mseSumCell'); 
 		var rmseSumCell = document.getElementById('rmseSumCell'); 
 		
-		var maeFormulaStr  = '${{';
-		var mseFormulaStr  = '${{';
-		var rmseFormulaStr = '$\\sqrt{{';
+		var maeFormulaStr  = '{{';
+		var mseFormulaStr  = '{{';
+		var rmseFormulaStr = '\\sqrt{{';
 		
 		// Accumulate the sum term strings, treating the first term
 		// separately, b/c of the plus signs between the remaining
@@ -763,9 +763,9 @@ RegressionSim = function() {
 		
 		// Now have e1 + e2 +...
 		// Next: the division by the number of data points:
-		maeFormulaStr  += '} \\over ' + dataPtObjArr.length + '} $';
-		mseFormulaStr  += '} \\over ' + dataPtObjArr.length + '} $';
-		rmseFormulaStr += '} \\over ' + dataPtObjArr.length + '} $';		
+		maeFormulaStr  += '} \\over ' + dataPtObjArr.length + '}';
+		mseFormulaStr  += '} \\over ' + dataPtObjArr.length + '}';
+		rmseFormulaStr += '} \\over ' + dataPtObjArr.length + '}';		
 
 		// Compute the estimators (MAE, MSE, RMSE):
 		var estimators = computeErrorEstimators();
@@ -777,9 +777,9 @@ RegressionSim = function() {
 		// That will trigger the MathJax re-typesetting:
 		if (maeSumsMath.length == 0) {
 			// The sum terms:
-			maeSumCell.innerHTML  = maeFormulaStr;
-			mseSumCell.innerHTML  = mseFormulaStr;
-			rmseSumCell.innerHTML = rmseFormulaStr;
+			maeSumCell.innerHTML  = '$' + maeFormulaStr + '$';
+			mseSumCell.innerHTML  = '$' + mseFormulaStr + '$';
+			rmseSumCell.innerHTML = '$' + rmseFormulaStr + '$';
 
 			// The final estimator result:
 			document.getElementById('maeTotalSumCell').innerHTML  = '$' + estimators.mae  + '$';
@@ -798,13 +798,13 @@ RegressionSim = function() {
 			MathJax.Hub.Queue(["Text",rmseSumsMath,rmseFormulaStr]);
 			
 			var totalMaeMath = MathJax.Hub.getAllJax("maeTotalSumCell")[0]
-			MathJax.Hub.Queue(["Text",totalMaeMath,'$' + estimators.mae  + '$']);
+			MathJax.Hub.Queue(["Text",totalMaeMath, estimators.mae]);
 			
 			var totalMseMath = MathJax.Hub.getAllJax("mseTotalSumCell")[0]
-			MathJax.Hub.Queue(["Text",totalMseMath,'$' + estimators.mse  + '$']);
+			MathJax.Hub.Queue(["Text",totalMseMath, estimators.mse]);
 
 			var totalRmseMath = MathJax.Hub.getAllJax("rmseTotalSumCell")[0]
-			MathJax.Hub.Queue(["Text",totalRmseMath,'$' + estimators.rmse  + '$']);
+			MathJax.Hub.Queue(["Text",totalRmseMath, estimators.rmse]);
 		}
 	}
 	
