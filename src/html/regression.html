@@ -3,6 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <LINK href="regression.css" rel="stylesheet" type="text/css">
+
+    <!-- Get and configure MathJax for using LaTeX in formulas: -->
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
+    <script type="text/javascript"
+	    src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+
   </head>
   <body id="regressionBody">
 
@@ -12,33 +21,13 @@
 	<svg id="svgArea" xmlns="http://www.w3.org/2000/svg"
 	     xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="500">
 	</svg>
-      </div> <!-- The error sums; will be filled in by regression.js -->
+      </div>
+      <!-- The error sums will be filled into a table
+	   that is added to the following div by regression.js 
 
       <div id='errorFormulas'>
-	<table id='formulaTable' class='formulaTable'>
-	  <tr class='formula'>
-	    <td id='maeNameCell'></td>
-	    <td id='maeEqualsCell'></td>
-	    <td id='maeSumCell'></td>
-	    <td id='maeSumEqualsCell'></td>
-	    <td id='maeTotalSumCell'></td>
-	  </tr>
-	  <tr class='formula'>
-	    <td id='mseNameCell'></td>
-	    <td id='mseEqualsCell'></td>
-	    <td id='mseSumCell'></td>
-	    <td id='mseSumEqualsCell'></td>
-	    <td id='mseTotalSumCell'></td>
-	  </tr>
-	  <tr class='formula'>
-	    <td id='rmseNameCell'></td>
-	    <td id='rmseEqualsCell'></td>
-	    <td id='rmseSumCell'></td>
-	    <td id='rmseSumEqualsCell'></td>
-	    <td id='rmseTotalSumCell'></td>
-	  </tr>
-	</table>
       </div>
+      -->
     </div>
     <script src="regression.js"></script>
   </body>

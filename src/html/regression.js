@@ -77,7 +77,7 @@ RegressionSim = function() {
 	var MEA;
 	var MSE;
 	var RMSE;
-	
+
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
 	}();
@@ -161,7 +161,7 @@ RegressionSim = function() {
 		document.getElementById('svgArea').addEventListener('mousemove', regSim.lineMoveHandleMove);
 		document.getElementById('svgArea').addEventListener('mouseup', regSim.lineMoveHandleMouseUp);
 	}
-		
+
 	this.lineMoveHandleMove = function(evt) {
 		evt.preventDefault();
 		if (lineDragHandleState.dragging) {
@@ -711,7 +711,7 @@ RegressionSim = function() {
 	
 	/*------------------------------- Error equation creation/updates ------------- */
 
-	var adjustErrFomulas = function() {
+	var adjustErrFomulas= function() {
 		/**
 		 * Gets the error residual magnitudes, and 
 		 * updates the formulas.
@@ -721,7 +721,7 @@ RegressionSim = function() {
 		clearFormulas();
 		
 		// The estimator names:
-		document.getElementById('maeNameCell').innerHTML  = 'mean absolute error (MEA)';
+		document.getElementById('maeNameCell').innerHTML  = 'mean absolute error (MAE)';
 		document.getElementById('mseNameCell').innerHTML  = 'mean squared error (MSE)';
 		document.getElementById('rmseNameCell').innerHTML = 'root mean squared error (RMSE)';
 
@@ -734,20 +734,25 @@ RegressionSim = function() {
 		var mseSumCell  = document.getElementById('mseSumCell'); 
 		var rmseSumCell = document.getElementById('rmseSumCell'); 
 		
-		rmseSumCell.innerHTML = '<span style="white-space: nowrap; font-size:larger">&radic;<span style="text-decoration:overline;">&nbsp;';
+		var maeFormulaStr  = '${{';
+		var mseFormulaStr  = '${{';
+		var rmseFormulaStr = '$\\sqrt{{';
 		
-		// Accumulate the sum terms:
+		// Accumulate the sum term strings, treating the first term
+		// separately, b/c of the plus signs between the remaining
+		// terms:
+		
 		var firstErr = dataPtObjArr[0].getAttribute('errMagnitude');
-		var maeFormulaStr  = firstErr;
+		maeFormulaStr  += firstErr;
 		if (firstErr < 0) {
-			var mseFormulaStr  = '(' + firstErr + ')<sup>2</sup>';
-			var rmseFormulaStr = '(' + firstErr + ')<sup>2</sup>';
+			mseFormulaStr  += '(' + firstErr + ')^2';
+			rmseFormulaStr += '(' + firstErr + ')^2';
 		} else {
-			var mseFormulaStr   = firstErr + '<sup>2</sup>';
-			var rmseFormulaStr  = firstErr + '<sup>2</sup>';
+			mseFormulaStr   += firstErr + '^2';
+			rmseFormulaStr  += firstErr + '^2';
 		}
 		
-		// Build the sum of terms part:
+		// Build the sum of terms part for the remaining terms:
 		var errorEstimators = computeErrorEstimators();
 		
 		for (var i=1; i<dataPtObjArr.length; i++) {
@@ -756,25 +761,26 @@ RegressionSim = function() {
 			if (i != 0) {
 				if (nxtError > 0) {
 					maeFormulaStr  += ' + ' + nxtError;
-					mseFormulaStr  += ' + ' + nxtError + '<sup>2</sup>';
-					rmseFormulaStr += ' + ' + nxtError + '<sup>2</sup>';
+					mseFormulaStr  += ' + ' + nxtError + '^2';
+					rmseFormulaStr += ' + ' + nxtError + '^2';
 				} else {
 					maeFormulaStr  += ' - ' + Math.abs(nxtError);
-					mseFormulaStr  += ' + ' + '(-' + Math.abs(nxtError) + ')' + '<sup>2</sup>';
-					rmseFormulaStr += ' + ' + '(-' + Math.abs(nxtError) + ')' + '<sup>2</sup>';
+					mseFormulaStr  += ' + ' + '(-' + Math.abs(nxtError) + ')' + '^2';
+					rmseFormulaStr += ' + ' + '(-' + Math.abs(nxtError) + ')' + '^2';
 				}
 			}
-			//****maeFormulaStr  += Math.abs(nxtError);
-			//****mseFormulaStr  += Math.abs(nxtError) + '<sup>2</sup>';
-			//****rmseFormulaStr += Math.abs(nxtError) + '<sup>2</sup>';
 		}
-		// Close the square root:
-		rmseFormulaStr += '&nbsp;</span>';
+		
+		// Now have e1 + e2 +...
+		// Next: the division by the number of data points:
+		maeFormulaStr  += '} \\over ' + dataPtObjArr.length + '} $';
+		mseFormulaStr  += '} \\over ' + dataPtObjArr.length + '} $';
+		rmseFormulaStr += '} \\over ' + dataPtObjArr.length + '} $';
 		
 		// Stick the sum terms into their table cells:
-		maeSumCell.innerHTML  = maeFormulaStr;
-		mseSumCell.innerHTML  = mseFormulaStr;
-		rmseSumCell.innerHTML = rmseFormulaStr;
+		maeSumCell.innerHTML  += maeFormulaStr;
+		mseSumCell.innerHTML  += mseFormulaStr;
+		rmseSumCell.innerHTML += rmseFormulaStr;
 		
 		// The right-side equal signs:
 		document.getElementById('maeSumEqualsCell').innerHTML  = '=';
@@ -783,10 +789,9 @@ RegressionSim = function() {
 
 		// The final results:
 		var estimators = computeErrorEstimators();
-		document.getElementById('maeTotalSumCell').innerHTML  = estimators.mae;
-		document.getElementById('mseTotalSumCell').innerHTML  = estimators.mse;
-		document.getElementById('rmseTotalSumCell').innerHTML = estimators.rmse;
-		
+		document.getElementById('maeTotalSumCell').innerHTML  = '$' + estimators.mae  + '$';
+		document.getElementById('mseTotalSumCell').innerHTML  = '$' + estimators.mse  + '$';
+		document.getElementById('rmseTotalSumCell').innerHTML = '$' + estimators.rmse + '$';
 	}
 	
 	var clearFormulas = function() {
@@ -794,13 +799,100 @@ RegressionSim = function() {
 		 * Clears the formula display, ensuring that every cell in the
 		 * display table is reset to an empty string.
 		 */
-		var table = document.getElementById('formulaTable');
-		for (var rowNum=0; rowNum<table.children.length; rowNum++) {
-			var row = table.children[rowNum];
-			for (var cellNum=0; cellNum<row.children.length; cellNum++) {
-				var cell = row.children.innerHTML = '';
-			}
+		
+		var formulasDiv = document.getElementById('errorFormulas');
+		//***var oldFormulaTable = document.getElementById('formulaTable');
+		//***if (oldFormulaTable !== undefined && oldFormulaTable !== null) {
+		//***	formulasDiv.removeChild(oldFormulaTable);
+		//***}
+		if (formulasDiv !== undefined && formulasDiv !== null) {
+			document.getElementById('regressionBody').removeChild(formulasDiv);
 		}
+		
+		var formulaTable = document.createElementNS(NS, 'table');
+		formulaTable.setAttribute('id', 'formulaTable');
+		
+		// First row: the cells for the MAE formula; each row has
+		// five columns where adjustErrFomulas() places text: 
+		//   |mean absolute error (mae) | = | <sumTerms> | = | <error estimate>
+		
+		var maeRow = document.createElementNS(NS, 'tr');
+		maeRow.setAttribute('class', 'formula');
+		
+		var maeRowNameCell = document.createElementNS(NS, 'td');
+		maeRowNameCell.setAttribute('id', 'maeNameCell');
+		var maeRowEqualsCell = document.createElementNS(NS, 'td');
+		maeRowEqualsCell.setAttribute('id', 'maeEqualsCell');
+		var maeRowSumCell = document.createElementNS(NS, 'td');
+		maeRowSumCell.setAttribute('id', 'maeSumCell');
+		var maeRowSumEqualsCell = document.createElementNS(NS, 'td');
+		maeRowSumEqualsCell.setAttribute('id', 'maeSumEqualsCell');
+		var maeRowTotalSumCell = document.createElementNS(NS, 'td');
+		maeRowTotalSumCell.setAttribute('id', 'maeTotalSumCell');
+		
+		maeRow.appendChild(maeRowNameCell);
+		maeRow.appendChild(maeRowEqualsCell);
+		maeRow.appendChild(maeRowSumCell);
+		maeRow.appendChild(maeRowSumEqualsCell);
+		maeRow.appendChild(maeRowTotalSumCell);
+		
+		formulaTable.appendChild(maeRow);
+		
+		// Second row: cells for the MSE formula: 
+		var mseRow = document.createElementNS(NS, 'tr');
+		mseRow.setAttribute('class', 'formula');
+		
+		var mseRowNameCell = document.createElementNS(NS, 'td');
+		mseRowNameCell.setAttribute('id', 'mseNameCell');
+		var mseRowEqualsCell = document.createElementNS(NS, 'td');
+		mseRowEqualsCell.setAttribute('id', 'mseEqualsCell');
+		var mseRowSumCell = document.createElementNS(NS, 'td');
+		mseRowSumCell.setAttribute('id', 'mseSumCell');
+		var mseRowSumEqualsCell = document.createElementNS(NS, 'td');
+		mseRowSumEqualsCell.setAttribute('id', 'mseSumEqualsCell');
+		var mseRowTotalSumCell = document.createElementNS(NS, 'td');
+		mseRowTotalSumCell.setAttribute('id', 'mseTotalSumCell');
+
+		mseRow.appendChild(mseRowNameCell);
+		mseRow.appendChild(mseRowEqualsCell);
+		mseRow.appendChild(mseRowSumCell);
+		mseRow.appendChild(mseRowSumEqualsCell);
+		mseRow.appendChild(mseRowTotalSumCell);
+		
+		formulaTable.appendChild(mseRow);
+				
+		// Third row: cells for the RMSE formula: 
+		var rmseRow = document.createElementNS(NS, 'tr');
+		rmseRow.setAttribute('class', 'formula');
+		
+		var rmseRowNameCell = document.createElementNS(NS, 'td');
+		rmseRowNameCell.setAttribute('id', 'rmseNameCell');
+		var rmseRowEqualsCell = document.createElementNS(NS, 'td');
+		rmseRowEqualsCell.setAttribute('id', 'rmseEqualsCell');
+		var rmseRowSumCell = document.createElementNS(NS, 'td');
+		rmseRowSumCell.setAttribute('id', 'rmseSumCell');
+		var rmseRowSumEqualsCell = document.createElementNS(NS, 'td');
+		rmseRowSumEqualsCell.setAttribute('id', 'rmseSumEqualsCell');
+		var rmseRowTotalSumCell = document.createElementNS(NS, 'td');
+		rmseRowTotalSumCell.setAttribute('id', 'rmseTotalSumCell');
+		
+		rmseRow.appendChild(rmseRowNameCell);
+		rmseRow.appendChild(rmseRowEqualsCell);
+		rmseRow.appendChild(rmseRowSumCell);
+		rmseRow.appendChild(rmseRowSumEqualsCell);
+		rmseRow.appendChild(rmseRowTotalSumCell);
+		
+		formulaTable.appendChild(rmseRow);
+		
+		// Add the whole table to the formulasDiv: 
+		//****formulasDiv.appendChild(formulaTable);
+		var formulaDiv = document.createElementNS(NS, 'div');
+		formulaDiv.setAttribute('id', 'errorFormulas');
+		formulaDiv.appendChild(formulaTable);
+		
+		//***document.getElementById('regressionBody').appendChild(formulaDiv);
+		document.getElementById('allWrapper').appendChild(formulaDiv);
+		MathJax.Hub.Queue(["Typeset", MathJax.Hub, 'errorFormulast']);
 	}
 	
 	/*------------------------------- Number Crunching ------------- */
