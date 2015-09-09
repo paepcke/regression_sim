@@ -766,30 +766,46 @@ RegressionSim = function() {
 		maeFormulaStr  += '} \\over ' + dataPtObjArr.length + '} $';
 		mseFormulaStr  += '} \\over ' + dataPtObjArr.length + '} $';
 		rmseFormulaStr += '} \\over ' + dataPtObjArr.length + '} $';		
+
+		// Compute the estimators (MAE, MSE, RMSE):
+		var estimators = computeErrorEstimators();
 		
 		// Stick the sum terms into their table cells:
 		var maeSumsMath = MathJax.Hub.getAllJax("maeSumCell")
+		// If no math was found, we are calling this method for
+		// the first time. In that case, init the innerHTML.
+		// That will trigger the MathJax re-typesetting:
 		if (maeSumsMath.length == 0) {
+			// The sum terms:
 			maeSumCell.innerHTML  = maeFormulaStr;
 			mseSumCell.innerHTML  = mseFormulaStr;
 			rmseSumCell.innerHTML = rmseFormulaStr;
+
+			// The final estimator result:
+			document.getElementById('maeTotalSumCell').innerHTML  = '$' + estimators.mae  + '$';
+			document.getElementById('mseTotalSumCell').innerHTML  = '$' + estimators.mse  + '$';
+			document.getElementById('rmseTotalSumCell').innerHTML = '$' + estimators.rmse + '$';
+			
 		} else {
+			// Ask MathJax to replace the sums terms:
 			maeSumsMath = maeSumsMath[0];
 			MathJax.Hub.Queue(["Text",maeSumsMath,maeFormulaStr]);
+			// MSE sums:
 			var mseSumsMath = MathJax.Hub.getAllJax("mseSumCell")[0]
 			MathJax.Hub.Queue(["Text",mseSumsMath,mseFormulaStr]);
+			// RMSE sums:
 			var rmseSumsMath = MathJax.Hub.getAllJax("rmseSumCell")[0]
 			MathJax.Hub.Queue(["Text",rmseSumsMath,rmseFormulaStr]);
-		}
+			
+			var totalMaeMath = MathJax.Hub.getAllJax("maeTotalSumCell")[0]
+			MathJax.Hub.Queue(["Text",totalMaeMath,'$' + estimators.mae  + '$']);
+			
+			var totalMseMath = MathJax.Hub.getAllJax("mseTotalSumCell")[0]
+			MathJax.Hub.Queue(["Text",totalMseMath,'$' + estimators.mse  + '$']);
 
-		// The final results:
-		var estimators = computeErrorEstimators();
-		document.getElementById('maeTotalSumCell').innerHTML  = '$' + estimators.mae  + '$';
-		document.getElementById('mseTotalSumCell').innerHTML  = '$' + estimators.mse  + '$';
-		document.getElementById('rmseTotalSumCell').innerHTML = '$' + estimators.rmse + '$';
-		
-		// Re-typeset the math:
-		MathJax.Hub.Queue(["Typeset",MathJax.Hub,"formulaTable"]);
+			var totalRmseMath = MathJax.Hub.getAllJax("rmseTotalSumCell")[0]
+			MathJax.Hub.Queue(["Text",totalRmseMath,'$' + estimators.rmse  + '$']);
+		}
 	}
 	
 	var clearFormulas = function() {
