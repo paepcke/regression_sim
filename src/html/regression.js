@@ -29,6 +29,9 @@ RegressionSim = function() {
 	var yAxisHeight 	  = coordSys.height - halfGridS;
 	var yAxisLeftPadding  = gridSize;
 	var xAxisWidth        = coordSys.width - gridSize;
+
+	var maxCoordSysX      = Math.round(coordSys.width / gridSize);
+	var maxCoordSysY      = Math.round(coordSys.height/ gridSize);
 	
 	var xAxisLabel = "Distance";
 	var yAxisLabel = "Potatoes";
@@ -182,6 +185,9 @@ RegressionSim = function() {
 			
 			newXY = moveRotateHandle(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
+			// Too slow to redraw the formulas during mouse-down.
+			// But we can redraw just the final sum:
+			adjustErrFormulaResultsOnly();
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
 		}
 	}
@@ -234,6 +240,9 @@ RegressionSim = function() {
 			currCoordSlope      = newSlope;
 			
 			drawFuncLineGivenPixelDims(newPixelSlope, currPixelCoordIntercept);
+			// Too slow to redraw the formulas during mouse-down.
+			// But we can redraw just the final sum:
+			adjustErrFormulaResultsOnly();
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
 		}
 	}
@@ -711,14 +720,29 @@ RegressionSim = function() {
 	
 	/*------------------------------- Error equation creation/updates ------------- */
 
+	var adjustErrFormulaResultsOnly = function() {
+		// Compute the estimators (MAE, MSE, RMSE):
+		var estimators = computeErrorEstimators();
+		document.getElementById('maeTotalSumCell').innerHTML = estimators.mae;
+		document.getElementById('mseTotalSumCell').innerHTML = estimators.mse;
+		document.getElementById('rmseTotalSumCell').innerHTML = estimators.rmse;
+		
+		
+/*****		var totalMaeMath = MathJax.Hub.getAllJax("maeTotalSumCell")[0]
+		MathJax.Hub.Queue(["Text",totalMaeMath, estimators.mae]);
+
+		var totalMseMath = MathJax.Hub.getAllJax("mseTotalSumCell")[0]
+		MathJax.Hub.Queue(["Text",totalMseMath, estimators.mse]);
+
+		var totalRmseMath = MathJax.Hub.getAllJax("rmseTotalSumCell")[0]
+		MathJax.Hub.Queue(["Text",totalRmseMath, estimators.rmse]);
+*/	}
+	
 	var adjustErrFomulas= function() {
 		/**
 		 * Gets the error residual magnitudes, and 
 		 * updates the formulas.
 		 */
-		
-		// Clear the whole display table:
-		//****clearFormulas();
 		
 		var maeSumCell  = document.getElementById('maeSumCell'); 
 		var mseSumCell  = document.getElementById('mseSumCell'); 
@@ -808,107 +832,6 @@ RegressionSim = function() {
 		}
 	}
 	
-	var clearFormulas = function() {
-		/**
-		 * Clears the formula display, ensuring that every cell in the
-		 * display table is reset to an empty string.
-		 */
-		
-		var formulasDiv = document.getElementById('errorFormulas');
-		//***var oldFormulaTable = document.getElementById('formulaTable');
-		//***if (oldFormulaTable !== undefined && oldFormulaTable !== null) {
-		//***	formulasDiv.removeChild(oldFormulaTable);
-		//***}
-		if (formulasDiv !== undefined && formulasDiv !== null) {
-			document.getElementById('regressionBody').removeChild(formulasDiv);
-		}
-		
-		var formulaTable = document.createElementNS(NS, 'table');
-		formulaTable.setAttribute('id', 'formulaTable');
-		
-		// First row: the cells for the MAE formula; each row has
-		// five columns where adjustErrFomulas() places text: 
-		//   |mean absolute error (mae) | = | <sumTerms> | = | <error estimate>
-		
-		var maeRow = document.createElementNS(NS, 'tr');
-		maeRow.setAttribute('class', 'formula');
-		
-		var maeRowNameCell = document.createElementNS(NS, 'td');
-		maeRowNameCell.setAttribute('id', 'maeNameCell');
-		var maeRowEqualsCell = document.createElementNS(NS, 'td');
-		maeRowEqualsCell.setAttribute('id', 'maeEqualsCell');
-		var maeRowSumCell = document.createElementNS(NS, 'td');
-		maeRowSumCell.setAttribute('id', 'maeSumCell');
-		var maeRowSumEqualsCell = document.createElementNS(NS, 'td');
-		maeRowSumEqualsCell.setAttribute('id', 'maeSumEqualsCell');
-		var maeRowTotalSumCell = document.createElementNS(NS, 'td');
-		maeRowTotalSumCell.setAttribute('id', 'maeTotalSumCell');
-		
-		maeRow.appendChild(maeRowNameCell);
-		maeRow.appendChild(maeRowEqualsCell);
-		maeRow.appendChild(maeRowSumCell);
-		maeRow.appendChild(maeRowSumEqualsCell);
-		maeRow.appendChild(maeRowTotalSumCell);
-		
-		formulaTable.appendChild(maeRow);
-		
-		// Second row: cells for the MSE formula: 
-		var mseRow = document.createElementNS(NS, 'tr');
-		mseRow.setAttribute('class', 'formula');
-		
-		var mseRowNameCell = document.createElementNS(NS, 'td');
-		mseRowNameCell.setAttribute('id', 'mseNameCell');
-		var mseRowEqualsCell = document.createElementNS(NS, 'td');
-		mseRowEqualsCell.setAttribute('id', 'mseEqualsCell');
-		var mseRowSumCell = document.createElementNS(NS, 'td');
-		mseRowSumCell.setAttribute('id', 'mseSumCell');
-		var mseRowSumEqualsCell = document.createElementNS(NS, 'td');
-		mseRowSumEqualsCell.setAttribute('id', 'mseSumEqualsCell');
-		var mseRowTotalSumCell = document.createElementNS(NS, 'td');
-		mseRowTotalSumCell.setAttribute('id', 'mseTotalSumCell');
-
-		mseRow.appendChild(mseRowNameCell);
-		mseRow.appendChild(mseRowEqualsCell);
-		mseRow.appendChild(mseRowSumCell);
-		mseRow.appendChild(mseRowSumEqualsCell);
-		mseRow.appendChild(mseRowTotalSumCell);
-		
-		formulaTable.appendChild(mseRow);
-				
-		// Third row: cells for the RMSE formula: 
-		var rmseRow = document.createElementNS(NS, 'tr');
-		rmseRow.setAttribute('class', 'formula');
-		
-		var rmseRowNameCell = document.createElementNS(NS, 'td');
-		rmseRowNameCell.setAttribute('id', 'rmseNameCell');
-		var rmseRowEqualsCell = document.createElementNS(NS, 'td');
-		rmseRowEqualsCell.setAttribute('id', 'rmseEqualsCell');
-		var rmseRowSumCell = document.createElementNS(NS, 'td');
-		rmseRowSumCell.setAttribute('id', 'rmseSumCell');
-		var rmseRowSumEqualsCell = document.createElementNS(NS, 'td');
-		rmseRowSumEqualsCell.setAttribute('id', 'rmseSumEqualsCell');
-		var rmseRowTotalSumCell = document.createElementNS(NS, 'td');
-		rmseRowTotalSumCell.setAttribute('id', 'rmseTotalSumCell');
-		
-		rmseRow.appendChild(rmseRowNameCell);
-		rmseRow.appendChild(rmseRowEqualsCell);
-		rmseRow.appendChild(rmseRowSumCell);
-		rmseRow.appendChild(rmseRowSumEqualsCell);
-		rmseRow.appendChild(rmseRowTotalSumCell);
-		
-		formulaTable.appendChild(rmseRow);
-		
-		// Add the whole table to the formulasDiv: 
-		//****formulasDiv.appendChild(formulaTable);
-		var formulaDiv = document.createElementNS(NS, 'div');
-		formulaDiv.setAttribute('id', 'errorFormulas');
-		formulaDiv.appendChild(formulaTable);
-		
-		//***document.getElementById('regressionBody').appendChild(formulaDiv);
-		document.getElementById('allWrapper').appendChild(formulaDiv);
-		MathJax.Hub.Queue(["Typeset", MathJax.Hub, 'errorFormulast']);
-	}
-	
 	/*------------------------------- Number Crunching ------------- */
 
 	var computeErrorEstimators = function() {
@@ -941,10 +864,82 @@ RegressionSim = function() {
 		var MSE  = MSE.toFixed(1);
 		return({'mae' : MAE, 'mse' : MSE, 'rmse' : RMSE});
 	}
+	
+	this.findMinima = function() {
+		
+		// Array containing objects with fields:
+		//   'b', 'm', 'mae', 'mse', 'rmse': 
+		var resMatrix = [];
+
+		// Currently minimal measures:
+		var minMae   = maxCoordSysY;
+		var minMse   = maxCoordSysY;
+		var minRmse  = maxCoordSysY;
+		
+		// Errors for each point:
+		var maeErrs  = [];
+		var mseErrs  = [];
+		
+		var finalMae;
+		var finalMse;
+		var finalRmse;
+		
+		for (var m=0; m<maxCoordSysX; m+=0.1) {
+			for (var b=0; b<maxCoordSysY; b+=0.1) {
+				// Compute errors for all points with new m and b:
+				maeErrs = [];
+				mseErrs = [];
+				for (var ptObjNum=0; ptObjNum<dataPtObjArr.length; ptObjNum++) {
+					// Compute the error estimators for this point
+					// for the current mx + b:
+					var ptXPixels   = ptObjCircle(dataPtObjArr[ptObjNum]).getAttribute('cx');
+					var ptYPixels   = ptObjCircle(dataPtObjArr[ptObjNum]).getAttribute('cy');
+					var coordXY = pixelsPt2Coord(ptXPixels, ptYPixels);
+					var ptX = coordXY.x;
+					var ptY = coordXY.y;
+					var lineY = m * ptX + b;
+					maeErrs.push(ptY - lineY);
+					mseErr = Math.pow(ptY - lineY, 2);
+					mseErrs.push(mseErr);
+				}
+				// Collected the errors for this m/b combination.
+				// compute the final estimators.
+				
+				// MAE is sum of errors divided by number of points:
+				finalMae = maeErrs.reduce(function(prevVal, currVal, index, array) {
+					return prevVal + currVal;
+				}) / dataPtObjArr.length;
+
+				// MSE and RMSE both need sum of squares divided by num of points:
+				finalMse = maeErrs.reduce(function(prevVal, currVal, index, array) {
+					return prevVal + Math.pow(currVal, 2);
+				}) / dataPtObjArr.length;
+				
+				finalRmse = Math.sqrt(finalMse);
+				
+				// Found a new minimum in any of the estimators?
+				minMae  = Math.min(minMae, Math.abs(finalMae));
+				minMse  = Math.min(minMse, finalMse);
+				minRmse = Math.min(minRmse, finalRmse);
+				
+				// Add this round's m,b,mae,mse,rmse object to the resMatrix:
+				resMatrix.push({'m' : m, 'b' : b, 'mae' : finalMae, 'mse' : finalMse, 'rmse' : finalRmse});
+			}
+		}
+		return {'minMae'  : minMae,
+				'minMse'  : minMse,
+				'minRmse' : minRmse,
+				'resMatrix' : resMatrix
+		};
+	}
 }
 
 regSim = new RegressionSim();
 regSim.setup();
+
+//*****
+res = regSim.findMinima();
+//*****
 
 document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
