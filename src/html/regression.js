@@ -1089,12 +1089,62 @@ RegressionSim = function() {
 		return {'mae'  : meshEntry.mae,
 			'mse'  : meshEntry.mse,
 			'rmse' : meshEntry.rmse
-		}
+		};
 	}
 
 	// ---------------------------- 3D Charting -------------------
 
 	this.setupSurfaceChart = function() {
+		var numRows = 50.0;
+		var numCols = 50;
+
+		var tooltipStrings = new Array();
+		var data = new google.visualization.DataTable();
+
+		for (var i = 0; i < numCols; i++) {
+			data.addColumn('number', 'col'+i);
+		}
+
+		data.addRows(numRows);
+		var d = 360 / numRows;
+		var idx = 0;
+
+		for (var i = 0; i < numRows; i++) {
+			for (var j = 0; j < numCols; j++) {
+				var matrixEntry = resMatrix[numRows * i + j];
+				var value = matrixEntry.mse;
+				data.setValue(i, j, value / 100000.0);
+
+				tooltipStrings[idx] = "m:" + matrixEntry.m + ", b:" + matrixEntry.b + ": error = " + value;
+				idx++;
+			}
+		}
+		var surfacePlot = new greg.ross.visualisation.SurfacePlot(document.getElementById("surfacePlotDiv"));
+
+		// Don't fill polygons in IE. It's too slow.
+		var fillPly = true;
+
+		// Define a colour gradient.
+		var colour1 = {red:0, green:0, blue:255};
+		var colour2 = {red:0, green:255, blue:255};
+		var colour3 = {red:0, green:255, blue:0};
+		var colour4 = {red:255, green:255, blue:0};
+		var colour5 = {red:255, green:0, blue:0};
+		var colours = [colour1, colour2, colour3, colour4, colour5];
+
+		// Axis labels.
+		var xAxisHeader = "m";
+		var yAxisHeader = "b";
+		var zAxisHeader = "error";
+
+		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,
+				fillPolygons: fillPly, tooltips: tooltipStrings, xTitle: xAxisHeader,
+				yTitle: yAxisHeader, zTitle: zAxisHeader, restrictXRotation: false};
+
+		surfacePlot.draw(data, options);
+	}
+
+	this.setupSurfaceChartOrig = function() {
 		var numRows = 45.0;
 		var numCols = 45;
 
@@ -1133,9 +1183,9 @@ RegressionSim = function() {
 		var colours = [colour1, colour2, colour3, colour4, colour5];
 
 		// Axis labels.
-		var xAxisHeader = "X";
-		var yAxisHeader = "Y";
-		var zAxisHeader = "Z";
+		var xAxisHeader = "m";
+		var yAxisHeader = "b";
+		var zAxisHeader = "error";
 
 		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,
 				fillPolygons: fillPly, tooltips: tooltipStrings, xTitle: xAxisHeader,
