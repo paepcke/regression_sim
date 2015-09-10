@@ -3,12 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <LINK href="regression.css" rel="stylesheet" type="text/css">
+
+    <!-- For Math formula rendering: -->
     <script type="text/javascript" 
 	    src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
     </script>
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
     </script>
+
+    <!-- For 3D plotting: -->
+    <script type="text/javascript" src='3Dplotting/SurfacePlot.js'></script>
+    <script type="text/javascript" src='3Dplotting/ColourGradient.js'></script>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+
   </head>
   <body id="regressionBody">
 
@@ -16,7 +24,7 @@
       <div id="simDiv">
 
 	<svg id="svgArea" xmlns="http://www.w3.org/2000/svg"
-	     xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="500">
+	     xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="510">
 	</svg>
       </div> <!-- The error sums; will be filled in by regression.js -->
 
@@ -46,6 +54,11 @@
 	</table>
       </div>
     </div>
+
+    <div id='surfacePlotDiv'>
+      <!-- SurfacePlot goes here... -->
+    </div>
+
     <script src="regression.js"></script>
   </body>
 </html>

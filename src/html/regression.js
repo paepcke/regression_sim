@@ -7,11 +7,18 @@ RegressionSim = function() {
 	var NS = "http://www.w3.org/2000/svg";
 	var svgArea;
 	
+	//*******
 	var gridSize = 20;
+	this.gridSize = 20;
+	//*******	
 	var halfGridS = Math.round(gridSize/2.0);
-	
 	var gridLineWidth    = 1;
 	var gridLineOpacity  = 0.2;
+	
+	// Steps for the 3D surface and search
+	// for minima of m/b:
+	//***var meshStep = 0.1;
+	var meshStep = 0.5;
 	
 	var arrowDefaultWidth = 1;
 	var arrowDefaultColor = 'black';
@@ -22,12 +29,22 @@ RegressionSim = function() {
 	var coordSys = {'topLeftX'  : gridSize,
 					'topLeftY'  : 0,
 					'width'     : 500,
-					'height'    : 370	};
+					//'height'    : 370	};
+					'height'    : 500	};
 
 	var axisStrokeWidth   = 5;
 	var axisStrokeOpacity = 0.5;
+	
+	//******
 	var yAxisHeight 	  = coordSys.height - halfGridS;
-	var yAxisLeftPadding  = gridSize;
+	this.yAxisHeight 	  = coordSys.height - halfGridS;
+	//******
+	
+	//******
+	var yAxisLeftPadding  = 2* gridSize;
+	this.yAxisLeftPadding  = 2* gridSize;
+	//******
+	
 	var xAxisWidth        = coordSys.width - gridSize;
 
 	var maxCoordSysX      = Math.round(coordSys.width / gridSize);
@@ -94,7 +111,10 @@ RegressionSim = function() {
 	// Array of objects that hold the mae/mse/rmse
 	// for every pair of m and b. Set by setup()
 	// via computeErrorEstimators:
-	var resMatrix;
+	//**********
+	//var resMatrix;
+	this.resMatrix;
+	//**********
 	
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
@@ -176,12 +196,14 @@ RegressionSim = function() {
 		//		'resMatrix' : resMatrix
 		//     }
 
-		var res = computeErrorEstimators();
+		var res = findMinima();
 		minMae  = res.minMae;
 		minMse  = res.minMse;
 		minRmse = res.minRmse;
 		resMatrix = res.resMatrix;
 		
+		// Make the formulas reflect initial line
+		// slope/intercept:
 		adjustErrFomulas();
 	}
 	
@@ -214,7 +236,7 @@ RegressionSim = function() {
 			currPixelCoordIntercept = newY;
 			currCoordIntercept      = pixels2Intercept(newY);
 			
-			newXY = moveRotateHandle(0, -dY);
+			var newXY = moveRotateHandle(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
 			// Too slow to redraw the formulas during mouse-down.
 			// But we can redraw just the final sum:
@@ -350,8 +372,8 @@ RegressionSim = function() {
     		pixelxMax = gridSize + gridSize * xMax;
     	}
     	
-    	pixelIntercept = intercept2Pixels(intercept);
-    	pixelSlope     = slope2Pixels(slope);
+    	var pixelIntercept = intercept2Pixels(intercept);
+    	var pixelSlope     = slope2Pixels(slope);
     	return drawFuncLineGivenPixelDims(pixelSlope, pixelIntercept, pixelxMax);
     }
     
@@ -465,16 +487,16 @@ RegressionSim = function() {
 			coordFld.appendChild(gridLine);
 		}
 		
-		// Draw y axis:
-		var yAxis = makeArrow(yAxisLeftPadding, yAxisHeight,
+		// Draw y axis: (Shortened by 1/2 grid size)
+		var yAxis = makeArrow(yAxisLeftPadding, yAxisHeight-halfGridS,
 			    		      yAxisLeftPadding, gridSize,
 				    	      axisStrokeWidth,
 				    	      axisStrokeOpacity);
 		coordFld.appendChild(yAxis);
 		
-		// Draw x axis:
-		var xAxis = makeArrow(yAxisLeftPadding - axisStrokeWidth/2, yAxisHeight,
-							  xAxisWidth, yAxisHeight,
+		// Draw x axis: (raised by 1/2 grid size)
+		var xAxis = makeArrow(yAxisLeftPadding - axisStrokeWidth/2, yAxisHeight-halfGridS,
+							  xAxisWidth, yAxisHeight-halfGridS,
 					          axisStrokeWidth,
 					          axisStrokeOpacity);
 		coordFld.appendChild(xAxis);
@@ -668,7 +690,8 @@ RegressionSim = function() {
 
 	
 	var solveEquation = function(pixelX) {
-		return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
+		//****return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
+		return currPixelCoordSlope * (pixelX - yAxisLeftPadding) + currPixelCoordIntercept;
 	}
 	
 	var pixelsInEm = function(parentElement) {
@@ -886,7 +909,7 @@ RegressionSim = function() {
 		return({'mae' : MAE, 'mse' : MSE, 'rmse' : RMSE});
 	}
 	
-	this.findMinima = function() {
+	var findMinima = function() {
 		
 		/**
 		 * Creates array containing objects with fields:
@@ -920,8 +943,8 @@ RegressionSim = function() {
 		var finalMse;
 		var finalRmse;
 		
-		for (var m=0; m<maxCoordSysX; m+=0.1) {
-			for (var b=0; b<maxCoordSysY; b+=0.1) {
+		for (var m=0; m<maxCoordSysX; m+=meshStep) {
+			for (var b=0; b<maxCoordSysY; b+=meshStep) {
 				// Compute errors for all points with new m and b:
 				maeErrs = [];
 				mseErrs = [];
@@ -966,101 +989,180 @@ RegressionSim = function() {
 				'minMse'  : minMse,
 				'minRmse' : minRmse,
 				'resMatrix' : resMatrix
-		};
+				};
+	}
 		
-		var mbForMinMae = function() {
-			/**
-			 * Return {'m' : <slope>, 'b' : <intercept>} that 
-			 * minimize the MAE. We assume that computeErrorEstimators()
-			 * was already called, and that instance var resMatrix 
-			 * contains an array of:
-			 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
-			 *    
-			 * and that instance var minMae contains the minimum.
-			 */
-			
-			if (theMBForMinMae === null) {
-				for (var i=0; i<resMatrix.length; i++) {
-					if (resMatrix[i].mae == minMae) {
-						varResEntry = resMatrix[i]; 
-						theMBForMinMae = {'m' : resEntry.m, 'b' : reEntry.b};
-						return theMBForMinMae;
-					}
+	var mbForMinMae = function() {
+		/**
+		 * Return {'m' : <slope>, 'b' : <intercept>} that 
+		 * minimize the MAE. We assume that computeErrorEstimators()
+		 * was already called, and that instance var resMatrix 
+		 * contains an array of:
+		 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+		 *    
+		 * and that instance var minMae contains the minimum.
+		 */
+
+		if (theMBForMinMae === null) {
+			for (var i=0; i<resMatrix.length; i++) {
+				if (resMatrix[i].mae == minMae) {
+					varResEntry = resMatrix[i]; 
+					theMBForMinMae = {'m' : resEntry.m, 'b' : reEntry.b};
+					return theMBForMinMae;
 				}
-			} else{
-				return theMBForMinMae;
 			}
-			
+		} else{
+			return theMBForMinMae;
 		}
 
-		var mbForMinMse = function() {
-			/**
-			 * Return {'m' : <slope>, 'b' : <intercept>} that 
-			 * minimize the MSE. We assume that computeErrorEstimators()
-			 * was already called, and that instance var resMatrix 
-			 * contains an array of:
-			 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
-			 *    
-			 * and that instance var minMse contains the minimum.
-			 */
-			
-			if (theMBForMinMse === null) {
-				for (var i=0; i<resMatrix.length; i++) {
-					if (resMatrix[i].mse == minMse) {
-						varResEntry = resMatrix[i];
-						theMBForMinMse = {'m' : resEntry.m, 'b' : reEntry.b};
-						return theMBForMinMse;
-					}
+	}
+
+	var mbForMinMse = function() {
+		/**
+		 * Return {'m' : <slope>, 'b' : <intercept>} that 
+		 * minimize the MSE. We assume that computeErrorEstimators()
+		 * was already called, and that instance var resMatrix 
+		 * contains an array of:
+		 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+		 *    
+		 * and that instance var minMse contains the minimum.
+		 */
+
+		if (theMBForMinMse === null) {
+			for (var i=0; i<resMatrix.length; i++) {
+				if (resMatrix[i].mse == minMse) {
+					varResEntry = resMatrix[i];
+					theMBForMinMse = {'m' : resEntry.m, 'b' : reEntry.b};
+					return theMBForMinMse;
 				}
-			} else {
-				return theMBForMinMse;
+			}
+		} else {
+			return theMBForMinMse;
+		}
+	}
+
+	var mbForMinRmse = function() {
+		/**
+		 * Return {'m' : <slope>, 'b' : <intercept>} that 
+		 * minimize the RMSE. We assume that computeErrorEstimators()
+		 * was already called, and that instance var resMatrix 
+		 * contains an array of:
+		 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+		 *    
+		 * and that instance var minRmse contains the minimum.
+		 */
+
+		if (theMBForMinRmse === null) {
+			for (var i=0; i<resMatrix.length; i++) {
+				if (resMatrix[i].rmse == minRmse) {
+					varResEntry = resMatrix[i];
+					theMBForMinRmse = {'m' : resEntry.m, 'b' : reEntry.b};;
+					return theMBForMinRmse;
+				}
+			}
+		} else {
+			return theMBForMinRmse;
+		}
+
+	}
+
+	//******
+	//var minimaForMB = function(m, b) {
+	this.minimaForMB = function(m, b) {
+		//******
+		/**
+		 * Given a slope and intercept, return:
+		 *    {'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+		 * We assume that computeErrorEstimators()
+		 * was already called, and that instance var resMatrix 
+		 * contains an array of:
+		 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
+		 *    
+		 * The array is sorted by m, then by b, and both increment
+		 * in steps of meshStep.
+		 */
+		m = fixFloat(1);
+		b = fixFloat(1);
+		var mIndx = Math.round(m / meshStep);
+		var bIndx = Math.round(b / meshStep);
+		var meshEntry  = resMatrix[mIndx + bIndx];
+		return {'mae'  : meshEntry.mae,
+			'mse'  : meshEntry.mse,
+			'rmse' : meshEntry.rmse
+		}
+	}
+
+	// ---------------------------- 3D Charting -------------------
+
+	this.setupSurfaceChart = function() {
+		var numRows = 45.0;
+		var numCols = 45;
+
+		var tooltipStrings = new Array();
+		var data = new google.visualization.DataTable();
+
+		for (var i = 0; i < numCols; i++) {
+			data.addColumn('number', 'col'+i);
+		}
+
+		data.addRows(numRows);
+		var d = 360 / numRows;
+		var idx = 0;
+
+		for (var i = 0; i < numRows; i++) {
+			for (var j = 0; j < numCols; j++) {
+				var value = (Math.cos(i * d * Math.PI / 180.0) * Math.cos(j * d * Math.PI / 180.0));
+				data.setValue(i, j, value / 4.0);
+
+				tooltipStrings[idx] = "x:" + i + ", y:" + j + " = " + value;
+				idx++;
 			}
 		}
 
-		var mbForMinRmse = function() {
-			/**
-			 * Return {'m' : <slope>, 'b' : <intercept>} that 
-			 * minimize the RMSE. We assume that computeErrorEstimators()
-			 * was already called, and that instance var resMatrix 
-			 * contains an array of:
-			 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
-			 *    
-			 * and that instance var minRmse contains the minimum.
-			 */
-			
-			if (theMBForMinRmse === null) {
-				for (var i=0; i<resMatrix.length; i++) {
-					if (resMatrix[i].rmse == minRmse) {
-						varResEntry = resMatrix[i];
-						theMBForMinRmse = {'m' : resEntry.m, 'b' : reEntry.b};;
-						return theMBForMinRmse;
-					}
-				}
-			} else {
-				return theMBForMinRmse;
-			}
-			
-		}
+		var surfacePlot = new greg.ross.visualisation.SurfacePlot(document.getElementById("surfacePlotDiv"));
 
-		var minimaForMB = function(m, b) {
-			/**
-			 * Given a slope and intercept, return:
-			 *    {'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
-			 */
-		*******	
-		}
+		// Don't fill polygons in IE. It's too slow.
+		var fillPly = true;
+
+		// Define a colour gradient.
+		var colour1 = {red:0, green:0, blue:255};
+		var colour2 = {red:0, green:255, blue:255};
+		var colour3 = {red:0, green:255, blue:0};
+		var colour4 = {red:255, green:255, blue:0};
+		var colour5 = {red:255, green:0, blue:0};
+		var colours = [colour1, colour2, colour3, colour4, colour5];
+
+		// Axis labels.
+		var xAxisHeader = "X";
+		var yAxisHeader = "Y";
+		var zAxisHeader = "Z";
+
+		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,
+				fillPolygons: fillPly, tooltips: tooltipStrings, xTitle: xAxisHeader,
+				yTitle: yAxisHeader, zTitle: zAxisHeader, restrictXRotation: false};
+
+		surfacePlot.draw(data, options);
 	}
 }
 
 regSim = new RegressionSim();
 regSim.setup();
 
-//*****
-res = regSim.findMinima();
-//*****
+// Create 3D chart:
+google.load("visualization", "1");
+google.setOnLoadCallback(regSim.setupSurfaceChart);
 
 document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.lineMoveHandleMouseDown);
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
 document.getElementById('rotateHandle').addEventListener('mousedown', regSim.rotateHandleMouseDown);
 document.getElementById('rotateHandle').addEventListener('mouseup'  , regSim.rotateHandleMouseUp);
 
+//*****  Show mouse coordinates instead of x axis label:
+document.getElementById('regressionBody').addEventListener('mousemove', function(evt) {
+	var xLabel = document.getElementById('xLabel');
+	var coordX = (evt.clientX - regSim.yAxisLeftPadding) / regSim.gridSize;
+	var coordY = (regSim.yAxisHeight - evt.clientY) / regSim.gridSize;
+	
+	var coordStr = 'coordx: ' + coordX + ', coordy:' + coordY + '; x: ' + evt.clientX + ', y:' + evt.clientY;  
+	xLabel.innerHTML = coordStr;
+});

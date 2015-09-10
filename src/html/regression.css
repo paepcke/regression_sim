@@ -4,12 +4,12 @@
 
 #simDiv {
     display : inline-block;
-    border  : 1px solid green;
+    //border  : 1px solid green;
 }
 
 #errorFormulas {
     display    : inline-block;
-    border     : 1px solid green;
+    //border     : 1px solid green;
     vertical-align : top;
 }
 
