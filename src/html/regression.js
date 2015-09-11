@@ -174,9 +174,9 @@ RegressionSim = function() {
 		// Draw the datapoints so that their error
 		// lines are below the function line, which we
 		// will draw below:
-		dataPtSpecArr = [{'x' : 4, 'y' : 13, 'id' : 'pt1'},
-		                 {'x' : 8, 'y' : 9, 'id' : 'pt2'},
-		                 {'x' : 15, 'y' : 12, 'id' : 'pt3'},
+		dataPtSpecArr = [{'x' : 4,  'y' : 13, 'id' : 'pt1', 'title' : "Abigail devoured 13 potatoes"},
+		                 {'x' : 8,  'y' : 9,  'id' : 'pt2', 'title' : "Bob enjoyed 9 potatoes"},
+		                 {'x' : 15, 'y' : 12, 'id' : 'pt3', 'title' : "Clara's put away 12 potatoes"},
 		                 ];
 		placeDataPoints(dataPtSpecArr);
 		
@@ -648,7 +648,7 @@ RegressionSim = function() {
 	
 	var placeDataPoints = function(ptCoordArray) {
 		/**
-		 * Given an array of {'x' : <num>, 'y' : <num> 'id' : <id>},
+		 * Given an array of {'x' : <num>, 'y' : <num>, 'id' : <id>,  'title' : <tooltip>},
 		 * draw those points if they don't exist, or move them
 		 * if they do exist. Units are user level coord system.
 		 */
@@ -665,6 +665,8 @@ RegressionSim = function() {
 				// No: create the point/errLine group:
 				var ptErrLineGrp = document.createElementNS(NS, 'g');
 				ptErrLineGrp.setAttribute('id', ptSpec.id);
+				// Add a tooltip to the circle (i.e. the measurement):
+				ptErrLineGrp.title = ptSpec.title;
 				
 				// Make the circle of the data point:
 				ptCircle =  document.createElementNS(NS, 'circle');
@@ -1224,7 +1226,7 @@ RegressionSim = function() {
 				var value = matrixEntry.mse;
 				data.setValue(i, j, value / 1000.0);
 
-				tooltipStrings[idx] = "m:" + matrixEntry.m + ", b:" + matrixEntry.b + ": error = " + value;
+				tooltipStrings[idx] = "slope:" + matrixEntry.m.toFixed(2) + ", intercept:" + matrixEntry.b.toFixed(2) + ": error = " + value.toFixed(2);
 				idx++;
 			}
 		}
@@ -1242,8 +1244,8 @@ RegressionSim = function() {
 		var colours = [colour1, colour2, colour3, colour4, colour5];
 
 		// Axis labels.
-		var xAxisHeader = "m";
-		var yAxisHeader = "b";
+		var xAxisHeader = "Slope";
+		var yAxisHeader = "Intercept";
 		var zAxisHeader = "Mean squared error";
 
 		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,

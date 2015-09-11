@@ -37,12 +37,12 @@ tr.formula {
 }
 
 input[type=button] {
-    background-color : rgb(41,179,217);
+    // background-color : rgb(41,179,217);
+    // background-color : rgb(96,188,213);
+    background-color : white;
     font-size : 16pt;
 }
 input[type=button]#seeButton {
     color : black;
     height : 40px;
-    margin-top : 20px;
-    
 }
