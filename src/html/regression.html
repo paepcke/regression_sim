@@ -28,6 +28,10 @@
 	</svg>
       </div> <!-- The error sums; will be filled in by regression.js -->
 
+      <!-- *****  -->
+      <label
+      <!-- *****  -->
+
       <div id='errorFormulas'>
 	<table id='formulaTable' class='formulaTable'>
 	  <tr class='formula'>
@@ -52,6 +56,17 @@
 	    <td id='rmseTotalSumCell'>estimate-error</td>
 	  </tr>
 	</table>
+	<div id="currEqHeader">
+	  Current estimator function:
+        </div>
+	<div id='currEquation'>
+	  potatoes = m*distance + b
+	</div>
+	<div id='seeBestMSE'>
+	  <input type="button" id="seeMaeButton" value="Best MAE line"/>
+	  <input type="button" id="seeMseButton" value="Best MSE line"/>
+	  <input type="button" id="seeRmseButton" value="Best RMSE line"/>
+	</div>
       </div>
     </div>
 

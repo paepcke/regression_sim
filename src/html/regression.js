@@ -1,5 +1,10 @@
 /**
- * 
+ *
+ * TODO: 
+ *   o Button to show true MSE
+ *   o Make points movable? ==> surface changes.
+ *   o Fix pixel offset.
+ *   o Add the objective function
  */
 
 RegressionSim = function() {
@@ -54,7 +59,7 @@ RegressionSim = function() {
 	var yAxisLabel = "Potatoes";
 	
 	var currCoordSlope = 0.5;
-	var currCoordIntercept = 3;
+	var currCoordIntercept = 3.0;
 	var currPixelCoordSlope;
 	var currPixelCoordIntercept;
 
@@ -115,6 +120,11 @@ RegressionSim = function() {
 	//var resMatrix;
 	this.resMatrix;
 	//**********
+
+	// Object in which to store line slope/intercept,
+	// handle positions, and other quantities. Used
+	// by saveState() and restore(state).
+	var savedState = {};
 	
 	this.construct = function() {
 		svgArea = document.getElementById('svgArea');
@@ -204,8 +214,12 @@ RegressionSim = function() {
 		
 		// Make the formulas reflect initial line
 		// slope/intercept:
-		adjustErrFomulas();
+		adjustErrFormulas();
+		// Make the 'current equation' reflect initial m/b:
+		adjustErrFormulaResultsOnly();
 	}
+	
+	//------------------------------  Event Handlers -------------------------
 	
 	this.lineMoveHandleMouseDown = function(evt) {
 		evt.preventDefault();
@@ -236,7 +250,7 @@ RegressionSim = function() {
 			currPixelCoordIntercept = newY;
 			currCoordIntercept      = pixels2Intercept(newY);
 			
-			var newXY = moveRotateHandle(0, -dY);
+			var newXY = moveRotateHandleDelta(0, -dY);
 			drawFuncLineGivenPixelDims(currPixelCoordSlope, newY);
 			// Too slow to redraw the formulas during mouse-down.
 			// But we can redraw just the final sum:
@@ -246,7 +260,7 @@ RegressionSim = function() {
 	}
 	
 	this.lineMoveHandleMouseUp = function(evt) {
-		adjustErrFomulas();
+		adjustErrFormulas();
 		evt.target.style.cursor = 'default';
 		lineDragHandleState.dragging = false;
 		lineDragHandleState.x = evt.clientX;
@@ -277,7 +291,7 @@ RegressionSim = function() {
 			// Diff between mouse and left edge of rotation drag handle:
 			var dYUpperLeft = rotateHandleState.y - evt.clientY;
 			
-			var newXY = moveRotateHandle(dXUpperLeft, dYUpperLeft);
+			var newXY = moveRotateHandleDelta(dXUpperLeft, dYUpperLeft);
 			var newPixelLeftEdge  = newXY.x;
 			var newPixelUpperEdge = newXY.y;
 
@@ -299,31 +313,48 @@ RegressionSim = function() {
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
 		}
 	}
+
+	var moveLineDragHandlePixels = function(yPixels) {
+		lineDragHandle.y.baseVal.value = yPixels;
+	}
 	
-	var moveRotateHandle = function(dx, dy) {
+	var moveLineDragHandleCoords = function(yCoord) {
+		var pixelCoords = coordPt2Pixels(0, yCoord);
+		moveLineDragHandlePixels(pixelCoords.y);
+	}
+	
+	var moveRotateHandlePixels = function(yPixels) {
+		rotateHandle.y.baseVal.value = yPixels;
+	}
+	
+	var moveRotateHandleCoords = function(yCoord) {
+		var pixelCoords = coordPt2Pixels(xAxisWidth, yCoord);
+		moveRotateHandlePixels(pixelCoords.y);
+	}
+	
+	var moveRotateHandleDelta = function(dx, dy) {
+		//*** This method likely causes the rotate handle problems.
 
 		// Candidate new pos of handle's left edge:
-			var newPixelLeftEdge = rotateHandle.x.baseVal.value + dx;
-			// But don't let handle go more than half into y-axis on left:
-			newPixelLeftEdge = Math.max(newPixelLeftEdge, yAxisLeftPadding + rotateHandleHalfWidth);
-			// ... nor with any of its body beyond the end of the x axis:
-			newPixelLeftEdge = Math.min(newPixelLeftEdge, xAxisWidth - rotateHandleHalfWidth);
+		var newPixelLeftEdge = rotateHandle.x.baseVal.value + dx;
+		// But don't let handle go more than half into y-axis on left:
+		newPixelLeftEdge = Math.max(newPixelLeftEdge, yAxisLeftPadding + rotateHandleHalfWidth);
+		// ... nor with any of its body beyond the end of the x axis:
+		newPixelLeftEdge = Math.min(newPixelLeftEdge, xAxisWidth - rotateHandleHalfWidth);
 
-			// Candidate new pos of handle's upper edge (subtract b/c y grows down):
-			var newPixelUpperEdge = rotateHandle.y.baseVal.value - dy;
-			// Don't move the handle below the x axis; just allow middle of
-			// handle to be on the x-axis:
-			newPixelUpperEdge = Math.min(newPixelUpperEdge, (yAxisHeight - rotateHandleHalfHeight)); 
-			// Don't allow part of the handle to move above the coord sys either:
-			newPixelUpperEdge = Math.max(newPixelUpperEdge, 0);
-			
-			
-			
-			// Move the rotate handle:
-			rotateHandle.x.baseVal.value = newPixelLeftEdge;
-			rotateHandle.y.baseVal.value = newPixelUpperEdge;
-			
-			return {'x' : newPixelLeftEdge, 'y' : newPixelUpperEdge};
+		// Candidate new pos of handle's upper edge (subtract b/c y grows down):
+		var newPixelUpperEdge = rotateHandle.y.baseVal.value - dy;
+		// Don't move the handle below the x axis; just allow middle of
+		// handle to be on the x-axis:
+		newPixelUpperEdge = Math.min(newPixelUpperEdge, (yAxisHeight - rotateHandleHalfHeight)); 
+		// Don't allow part of the handle to move above the coord sys either:
+		newPixelUpperEdge = Math.max(newPixelUpperEdge, 0);
+
+		// Move the rotate handle:
+		rotateHandle.x.baseVal.value = newPixelLeftEdge;
+		rotateHandle.y.baseVal.value = newPixelUpperEdge;
+
+		return {'x' : newPixelLeftEdge, 'y' : newPixelUpperEdge};
 	}
 	
 	var computeSlopeFromRotateHandle = function(newPixelLeftEdge, newPixelUpperEdge) {
@@ -345,13 +376,70 @@ RegressionSim = function() {
 	}
 	
 	this.rotateHandleMouseUp = function(evt) {
-		adjustErrFomulas();
+		adjustErrFormulas();
 		evt.target.style.cursor = 'default';
 		rotateHandleState.dragging = false;
 		rotateHandle.setAttribute('fill', rotateHandleRestColor);
 		document.getElementById('svgArea').removeEventListener('mousemove', regSim.lineMoveHandleMove);
 		document.getElementById('svgArea').removeEventListener('mouseup', regSim.lineMoveHandleMouseUp);
 	}
+	
+	this.seeBestMaeButtonMouseDown = function(evt) {
+		saveState();
+		showBestByObjectiveMeasure('mae');
+	}
+
+	this.seeBestMseButtonMouseDown = function(evt) {
+		saveState();
+		showBestByObjectiveMeasure('mse');
+	}
+
+	this.seeBestRmseButtonMouseDown = function(evt) {
+		saveState();
+		showBestByObjectiveMeasure('rmse');
+	}
+	
+	this.seeBestButtonMouseUp = function(evt) {
+		restoreState();
+	}
+
+	var showBestByObjectiveMeasure = function(objective) {
+		/**
+		 * Given a minimization objective, which can be
+		 * 'mae', 'mse', or 'rmse', look up the optimal
+		 * slope and intercept, and redraw the line and 
+		 * handles. Also calls the adjustment functions
+		 * for error lines and formula refresh.
+		 */
+
+		var optimalMB;
+		if (objective == 'mae') {optimalMB = mbForMinMae()}
+		else if (objective == 'mse') {optimalMB = mbForMinMse()}
+		else if (objective == 'rmse') {optimalMB = mbForMinRmse()};
+
+		var pixelM = slope2Pixels(optimalMB.m);
+		var pixelB = intercept2Pixels(optimalMB.b);
+		
+		moveLineDragHandlePixels(pixelB);
+		moveRotateHandlePixels(pixelM * xAxisWidth + pixelB);
+		
+		currCoordSlope      	= optimalMB.m;
+		currCoordIntercept  	= optimalMB.b;
+		currPixelCoordSlope 	= pixelM;
+		currPixelCoordIntercept = pixelB;
+		
+		drawFuncLineGivenPixelDims(currPixelCoordSlope, currPixelCoordIntercept);
+		// This call must come before redrawing the formula
+		// results:
+		adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+		// Too slow to redraw the formulas during mouse-down.
+		// But we can redraw just the final sum:
+		//****adjustErrFormulaResultsOnly();
+		adjustErrFormulas();
+	}
+	
+	//------------------------------  Drawing the Function Line -------------------------
+	
 	
     var drawFuncLine = function(slope, intercept, xMax) {
     	/**
@@ -410,6 +498,8 @@ RegressionSim = function() {
     	return line;
     }
 
+    //------------------------------  Transform Utils -------------------------
+
     var pixelsPt2Coord = function(pixelX, pixelY) {
     	/**
     	 * Given pixel values for a point, return an 
@@ -421,7 +511,7 @@ RegressionSim = function() {
     	return {'x' : coordX, 'y' : coordY};
     }
     
-    var coordPt2Pixels= function(coordX, coordY) {
+    var coordPt2Pixels = function(coordX, coordY) {
     	/**
     	 * Given coordinate system values for a point, return an 
     	 * object where x = x-in-pixels, and 
@@ -444,7 +534,7 @@ RegressionSim = function() {
     }
     
     var pixels2Intercept = function(pixelIntercept) {
-    	return Math.round((yAxisHeight - pixelIntercept) / gridSize);
+    	return (yAxisHeight - pixelIntercept) / gridSize;
     }
     
     var slope2Pixels = function(slope) {
@@ -454,6 +544,8 @@ RegressionSim = function() {
     var pixels2Slope = function(pixelSlope) {
     	return - pixelSlope;
     }
+
+    //------------------------------  Creating Visual Elements -------------------------
     
 	var makeCoordSys = function() {
 
@@ -637,80 +729,8 @@ RegressionSim = function() {
 		}
 		if (currPixelCoordSlope !== undefined && currPixelCoordIntercept !== undefined) {
 			adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
-			adjustErrFomulas();			
+			adjustErrFormulas();			
 		}
-	}
-	
-	var adjustErrorLines = function(pixelSlope, pixelIntercept) {
-		for (var i=0; i<dataPtObjArr.length; i++) {
-			// Get one group: circle/errLine:
-			var dataObj = dataPtObjArr[i];
-			// Get the data point's circle, error line, 
-			// and err magnitude txt element:
-			var dataCircle = ptObjCircle(dataObj);
-			var errLine    = ptObjErrLine(dataObj);
-			var errMagTxt  = ptObjMagTxt(dataObj);
-			
-			var pixelX  = dataCircle.cx.baseVal.value;
-			var pixelY  = dataCircle.cy.baseVal.value;
-			var lineY   = solveEquation(pixelX);
-			var errorLen = lineY - pixelY + Math.round(dataPtRadius / 2);
-			
-			// Set the error line length, taking account
-			// of the line starting in the middle of the
-			// data point circle, and ending in the middle
-			// of the line:
-			//****var correction = Math.round(lineStrokeWidth / 2) + Math.round(dataPtRadius/2); 
-			//****var correction = Math.round(dataPtRadius/2);
-			var correction = 0;
-			errLine.setAttribute('y2', lineY + correction);
-			
-			// Convert the pixel error magnitude to 
-			// coord sys:
-			var errorLenCoord = (errorLen / gridSize).toFixed(1);
-			// Set the error magnitude text:
-			errMagTxt.textContent = errorLenCoord;
-			// Set (or initially add) the error magnitude to
-			// the point object group:
-			dataObj.setAttribute('errMagnitude', errorLenCoord);
-		}
-	}
-	
-	var ptObjCircle = function(dataPtGrp) {
-		return dataPtGrp.children[2];
-	}
-	
-	var ptObjErrLine= function(dataPtGrp) {
-		return dataPtGrp.children[0];
-	}
-
-	var ptObjMagTxt = function(dataPtGrp) {
-		return dataPtGrp.children[1];
-	}
-
-	
-	var solveEquation = function(pixelX) {
-		//****return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
-		return currPixelCoordSlope * (pixelX - yAxisLeftPadding) + currPixelCoordIntercept;
-	}
-	
-	var pixelsInEm = function(parentElement) {
-		/**
-		 * Given an optional parent element, return the width
-		 * of one em in pixels. If parentElement is not provided,
-		 * uses document.body.
-		 */
-		parentElement = parentElement || document.body;
-		return Number(getComputedStyle(parentElement, "").fontSize.match(/(\d*(\.\d*)?)px/)[1]);		
-	}
-	
-	var computeRotHandlePixelCoords = function() {
-		/**
-		 * Find the right-most visible point on the line.
-		 */
-		var x = Math.min(xAxisWidth, Math.round(-currPixelCoordIntercept / currPixelCoordSlope));
-		var y = currPixelCoordSlope * x + currPixelCoordIntercept;
-		return {'x' : x, 'y' : y};
 	}
 	
 	var makeArrow = function(x1, y1, x2, y2, strokeWidth, strokeOpacity) {
@@ -772,8 +792,76 @@ RegressionSim = function() {
 
 	}
 	
+	var ptObjCircle = function(dataPtGrp) {
+		return dataPtGrp.children[2];
+	}
+	
+	var ptObjErrLine= function(dataPtGrp) {
+		return dataPtGrp.children[0];
+	}
+
+	var ptObjMagTxt = function(dataPtGrp) {
+		return dataPtGrp.children[1];
+	}
+
+	
+	var pixelsInEm = function(parentElement) {
+		/**
+		 * Given an optional parent element, return the width
+		 * of one em in pixels. If parentElement is not provided,
+		 * uses document.body.
+		 */
+		parentElement = parentElement || document.body;
+		return Number(getComputedStyle(parentElement, "").fontSize.match(/(\d*(\.\d*)?)px/)[1]);		
+	}
+	
+	var computeRotHandlePixelCoords = function() {
+		/**
+		 * Find the right-most visible point on the line.
+		 */
+		var x = Math.min(xAxisWidth, Math.round(-currPixelCoordIntercept / currPixelCoordSlope));
+		var y = currPixelCoordSlope * x + currPixelCoordIntercept;
+		return {'x' : x, 'y' : y};
+	}
+	
+	
 	/*------------------------------- Error equation creation/updates ------------- */
 
+	var adjustErrorLines = function(pixelSlope, pixelIntercept) {
+		for (var i=0; i<dataPtObjArr.length; i++) {
+			// Get one group: circle/errLine:
+			var dataObj = dataPtObjArr[i];
+			// Get the data point's circle, error line, 
+			// and err magnitude txt element:
+			var dataCircle = ptObjCircle(dataObj);
+			var errLine    = ptObjErrLine(dataObj);
+			var errMagTxt  = ptObjMagTxt(dataObj);
+			
+			var pixelX  = dataCircle.cx.baseVal.value;
+			var pixelY  = dataCircle.cy.baseVal.value;
+			var lineY   = solveEquation(pixelX);
+			var errorLen = lineY - pixelY + Math.round(dataPtRadius / 2);
+			
+			// Set the error line length, taking account
+			// of the line starting in the middle of the
+			// data point circle, and ending in the middle
+			// of the line:
+			//****var correction = Math.round(lineStrokeWidth / 2) + Math.round(dataPtRadius/2); 
+			//****var correction = Math.round(dataPtRadius/2);
+			var correction = 0;
+			errLine.setAttribute('y2', lineY + correction);
+			
+			// Convert the pixel error magnitude to 
+			// coord sys:
+			var errorLenCoord = (errorLen / gridSize).toFixed(1);
+			// Set the error magnitude text:
+			errMagTxt.textContent = errorLenCoord;
+			// Set (or initially add) the error magnitude to
+			// the point object group:
+			dataObj.setAttribute('errMagnitude', errorLenCoord);
+		}
+	}
+	
 	var adjustErrFormulaResultsOnly = function() {
 		// Compute the estimators (MAE, MSE, RMSE):
 		var estimators = computeErrorEstimators();
@@ -781,21 +869,20 @@ RegressionSim = function() {
 		document.getElementById('mseTotalSumCell').innerHTML = estimators.mse;
 		document.getElementById('rmseTotalSumCell').innerHTML = estimators.rmse;
 		
+		// The equation:
+		document.getElementById('currEquation').innerHTML = 'potatoes = ' + 
+															currCoordSlope.toFixed(2) + 
+															' * distance + ' + 
+															currCoordIntercept.toFixed(2);
 		
-/*****		var totalMaeMath = MathJax.Hub.getAllJax("maeTotalSumCell")[0]
-		MathJax.Hub.Queue(["Text",totalMaeMath, estimators.mae]);
-
-		var totalMseMath = MathJax.Hub.getAllJax("mseTotalSumCell")[0]
-		MathJax.Hub.Queue(["Text",totalMseMath, estimators.mse]);
-
-		var totalRmseMath = MathJax.Hub.getAllJax("rmseTotalSumCell")[0]
-		MathJax.Hub.Queue(["Text",totalRmseMath, estimators.rmse]);
-*/	}
+		
+	}
 	
-	var adjustErrFomulas= function() {
+	var adjustErrFormulas = function() {
 		/**
 		 * Gets the error residual magnitudes, and 
-		 * updates the formulas.
+		 * updates the formulas on the screen. Both
+		 * the error sums and the current formula.
 		 */
 		
 		var maeSumCell  = document.getElementById('maeSumCell'); 
@@ -811,11 +898,12 @@ RegressionSim = function() {
 		// terms:
 		
 		var firstErr = dataPtObjArr[0].getAttribute('errMagnitude');
-		maeFormulaStr  += firstErr;
 		if (firstErr < 0) {
+			maeFormulaStr  += '|' + firstErr + '|';
 			mseFormulaStr  += '(' + firstErr + ')^2';
 			rmseFormulaStr += '(' + firstErr + ')^2';
 		} else {
+			maeFormulaStr   += firstErr;
 			mseFormulaStr   += firstErr + '^2';
 			rmseFormulaStr  += firstErr + '^2';
 		}
@@ -832,7 +920,7 @@ RegressionSim = function() {
 					mseFormulaStr  += ' + ' + nxtError + '^2';
 					rmseFormulaStr += ' + ' + nxtError + '^2';
 				} else {
-					maeFormulaStr  += ' - ' + Math.abs(nxtError);
+					maeFormulaStr  += ' + |' + nxtError + '|';
 					mseFormulaStr  += ' + ' + '(-' + Math.abs(nxtError) + ')' + '^2';
 					rmseFormulaStr += ' + ' + '(-' + Math.abs(nxtError) + ')' + '^2';
 				}
@@ -850,9 +938,11 @@ RegressionSim = function() {
 		
 		// Stick the sum terms into their table cells:
 		var maeSumsMath = MathJax.Hub.getAllJax("maeSumCell")
+		
 		// If no math was found, we are calling this method for
 		// the first time. In that case, init the innerHTML.
 		// That will trigger the MathJax re-typesetting:
+		
 		if (maeSumsMath.length == 0) {
 			// The sum terms:
 			maeSumCell.innerHTML  = '$' + maeFormulaStr + '$';
@@ -874,10 +964,24 @@ RegressionSim = function() {
 		document.getElementById('maeTotalSumCell').innerHTML  = estimators.mae;
 		document.getElementById('mseTotalSumCell').innerHTML  = estimators.mse;
 		document.getElementById('rmseTotalSumCell').innerHTML = estimators.rmse;
+		
+		// The 'current formula' is just normal HTML:
+		// The equation:
+		document.getElementById('currEquation').innerHTML = 'potatoes = ' + 
+															currCoordSlope.toFixed(2) + 
+															' * distance + ' + 
+															currCoordIntercept.toFixed(2);
 	}
 	
 	/*------------------------------- Number Crunching ------------- */
 
+	
+	
+	var solveEquation = function(pixelX) {
+		//****return currPixelCoordSlope * pixelX + currPixelCoordIntercept;
+		return currPixelCoordSlope * (pixelX - yAxisLeftPadding) + currPixelCoordIntercept;
+	}
+	
 	var computeErrorEstimators = function() {
 		/**
 		 * Goes through all the data points, expecting that
@@ -895,7 +999,9 @@ RegressionSim = function() {
 		for (var i=0; i<dataPtObjArr.length; i++) {
 			var dataPtObj = dataPtObjArr[i];
 			nxtError = dataPtObj.getAttribute('errMagnitude');
-			errSum += parseFloat(nxtError);
+			// The Math.abs is for MAE: it's the sum of the 
+			// absolute errors:
+			errSum += parseFloat(Math.abs(nxtError));
 			errSquaredSum += Math.pow(parseFloat(nxtError),2.0);
 		}
 		var numDataPts = dataPtObjArr.length;
@@ -957,24 +1063,26 @@ RegressionSim = function() {
 					var ptX = coordXY.x;
 					var ptY = coordXY.y;
 					var lineY = m * ptX + b;
-					maeErrs.push(ptY - lineY);
-					mseErr = Math.pow(ptY - lineY, 2);
+					var err = Math.abs(ptY - lineY);
+					maeErrs.push(err);
+					var mseErr = Math.pow(err, 2);
 					mseErrs.push(mseErr);
 				}
 				// Collected the errors for this m/b combination.
 				// compute the final estimators.
 				
 				// MAE is sum of errors divided by number of points:
-				finalMae = maeErrs.reduce(function(prevVal, currVal, index, array) {
+				var finalMae = maeErrs.reduce(function(prevVal, currVal, index, array) {
 					return prevVal + currVal;
 				}) / dataPtObjArr.length;
 
-				// MSE and RMSE both need sum of squares divided by num of points:
-				finalMse = maeErrs.reduce(function(prevVal, currVal, index, array) {
-					return prevVal + Math.pow(currVal, 2);
+				// MSE and RMSE both need sum of squares divided by num of points.
+				// The mseErrs are already squared, so just add them up:
+				var finalMse = mseErrs.reduce(function(prevVal, currVal, index, array) {
+					return prevVal + currVal;
 				}) / dataPtObjArr.length;
 				
-				finalRmse = Math.sqrt(finalMse);
+				var finalRmse = Math.sqrt(finalMse);
 				
 				// Found a new minimum in any of the estimators?
 				minMae  = Math.min(minMae, Math.abs(finalMae));
@@ -1006,8 +1114,8 @@ RegressionSim = function() {
 		if (theMBForMinMae === null) {
 			for (var i=0; i<resMatrix.length; i++) {
 				if (resMatrix[i].mae == minMae) {
-					varResEntry = resMatrix[i]; 
-					theMBForMinMae = {'m' : resEntry.m, 'b' : reEntry.b};
+					var resEntry = resMatrix[i]; 
+					theMBForMinMae = {'m' : resEntry.m, 'b' : resEntry.b};
 					return theMBForMinMae;
 				}
 			}
@@ -1025,14 +1133,15 @@ RegressionSim = function() {
 		 * contains an array of:
 		 *    {'m' : m, 'b' : b, 'mae' : <mae>, 'mse' : <mse>, 'rmse' : <rmse>}
 		 *    
-		 * and that instance var minMse contains the minimum.
+		 * and that instance var minMse contains the minimum. Returned
+		 * units are in pixels.
 		 */
 
 		if (theMBForMinMse === null) {
 			for (var i=0; i<resMatrix.length; i++) {
 				if (resMatrix[i].mse == minMse) {
-					varResEntry = resMatrix[i];
-					theMBForMinMse = {'m' : resEntry.m, 'b' : reEntry.b};
+					var resEntry = resMatrix[i];
+					theMBForMinMse = {'m' : resEntry.m, 'b' : resEntry.b};
 					return theMBForMinMse;
 				}
 			}
@@ -1055,8 +1164,8 @@ RegressionSim = function() {
 		if (theMBForMinRmse === null) {
 			for (var i=0; i<resMatrix.length; i++) {
 				if (resMatrix[i].rmse == minRmse) {
-					varResEntry = resMatrix[i];
-					theMBForMinRmse = {'m' : resEntry.m, 'b' : reEntry.b};;
+					var resEntry = resMatrix[i];
+					theMBForMinRmse = {'m' : resEntry.m, 'b' : resEntry.b};;
 					return theMBForMinRmse;
 				}
 			}
@@ -1135,7 +1244,7 @@ RegressionSim = function() {
 		// Axis labels.
 		var xAxisHeader = "m";
 		var yAxisHeader = "b";
-		var zAxisHeader = "error";
+		var zAxisHeader = "Mean squared error";
 
 		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,
 				fillPolygons: fillPly, tooltips: tooltipStrings, xTitle: xAxisHeader,
@@ -1145,6 +1254,12 @@ RegressionSim = function() {
 	}
 
 	this.setupSurfaceChartOrig = function() {
+		/** The original example from the Web.
+		 * Makes a more interesting surface. To 
+		 * see, replace call to setupSurfaceChar()
+		 * to setupSurfaceCharOrig().
+		 * 
+		 */
 		var numRows = 45.0;
 		var numCols = 45;
 
@@ -1183,15 +1298,44 @@ RegressionSim = function() {
 		var colours = [colour1, colour2, colour3, colour4, colour5];
 
 		// Axis labels.
-		var xAxisHeader = "m";
-		var yAxisHeader = "b";
-		var zAxisHeader = "error";
+		var xAxisHeader = "X";
+		var yAxisHeader = "Y";
+		var zAxisHeader = "Z";
 
 		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,
 				fillPolygons: fillPly, tooltips: tooltipStrings, xTitle: xAxisHeader,
 				yTitle: yAxisHeader, zTitle: zAxisHeader, restrictXRotation: false};
 
 		surfacePlot.draw(data, options);
+	}
+	
+	
+	// ---------------------------- Utilities  -------------------
+	
+	var saveState = function() {
+		/**
+		 * Save position of line-drag and rotate handles.
+		 * Save current slope and intercept. No quantities are
+		 * changed. This method's dual is restoreState() which 
+		 * moves line and handles to their previous positions.
+		 */
+		
+		savedState.pixelSlope           = currPixelCoordSlope
+		savedState.pixelIntercept       = currPixelCoordIntercept
+		savedState.pixelLineDragHandleY = lineDragHandle.getAttribute('y');
+		savedState.pixelRotateHandleY   = rotateHandle.getAttribute('y');
+	}
+	
+	var restoreState = function() {
+		currPixelCoordIntercept = savedState.pixelIntercept;
+		currPixelCoordSlope     = savedState.pixelSlope;
+		drawFuncLineGivenPixelDims(savedState.pixelSlope, savedState.pixelIntercept, xAxisWidth);
+		moveLineDragHandlePixels(savedState.pixelLineDragHandleY);
+		moveRotateHandlePixels(savedState.pixelRotateHandleY);
+		// Error computation must come before formula update:
+		adjustErrorLines(currPixelCoordSlope, currPixelCoordIntercept);
+		//****adjustErrFormulaResultsOnly();
+		adjustErrFormulas();
 	}
 }
 
@@ -1206,6 +1350,18 @@ document.getElementById('lineDragHandle').addEventListener('mousedown', regSim.l
 document.getElementById('lineDragHandle').addEventListener('mouseup'  , regSim.lineMoveHandleMouseUp);
 document.getElementById('rotateHandle').addEventListener('mousedown', regSim.rotateHandleMouseDown);
 document.getElementById('rotateHandle').addEventListener('mouseup'  , regSim.rotateHandleMouseUp);
+
+document.getElementById('seeMaeButton').addEventListener('mousedown'  , regSim.seeBestMaeButtonMouseDown);
+document.getElementById('seeMaeButton').addEventListener('mouseup'  , regSim.seeBestButtonMouseUp);
+
+document.getElementById('seeMseButton').addEventListener('mousedown'  , regSim.seeBestMseButtonMouseDown);
+document.getElementById('seeMseButton').addEventListener('mouseup'  , regSim.seeBestButtonMouseUp);
+
+document.getElementById('seeRmseButton').addEventListener('mousedown'  , regSim.seeBestRmseButtonMouseDown);
+document.getElementById('seeRmseButton').addEventListener('mouseup'  , regSim.seeBestButtonMouseUp);
+
+
+
 
 //*****  Show mouse coordinates instead of x axis label:
 document.getElementById('regressionBody').addEventListener('mousemove', function(evt) {
