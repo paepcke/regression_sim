@@ -1204,8 +1204,8 @@ RegressionSim = function() {
 	// ---------------------------- 3D Charting -------------------
 
 	this.setupSurfaceChart = function() {
-		var numRows = 50.0;
-		var numCols = 50;
+		var numRows = 15.0 //**** 50.0;
+		var numCols = 50.0;
 
 		var tooltipStrings = new Array();
 		var data = new google.visualization.DataTable();
@@ -1222,7 +1222,7 @@ RegressionSim = function() {
 			for (var j = 0; j < numCols; j++) {
 				var matrixEntry = resMatrix[numRows * i + j];
 				var value = matrixEntry.mse;
-				data.setValue(i, j, value / 100000.0);
+				data.setValue(i, j, value / 1000.0);
 
 				tooltipStrings[idx] = "m:" + matrixEntry.m + ", b:" + matrixEntry.b + ": error = " + value;
 				idx++;
