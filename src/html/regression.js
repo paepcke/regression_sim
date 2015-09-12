@@ -1220,7 +1220,7 @@ RegressionSim = function() {
 		 *  
 		 *     {'highlights'   : [{"i" : row,
 		 *     	                   "j" : column,
-		 *     	                   <highlight-method>}
+		 *     	                   "method" : <highlight-method>}
 		 *                            ...
 		 *                       ],
 		 *      'axisLabelPos'  : <axisPos>
@@ -1229,6 +1229,13 @@ RegressionSim = function() {
 		 * where <highlight-method> is either "stroke" or "color",
 		 * and axisPos is "middle" or "top".
 		 */
+		
+		//*******
+		options = {'highlights' : [{'i' : 10,
+									'j' : 20,
+									'method' : 'color'}]};
+		//*******
+		
 		var numRows = 15.0 //**** 50.0;
 		var numCols = 50.0;
 		var axisLabelPos = null;

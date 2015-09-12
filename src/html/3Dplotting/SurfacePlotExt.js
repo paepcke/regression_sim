@@ -227,7 +227,19 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
                 
                 var rgbColour = colourGradientObject.getColour(colourValue);
                 var colr = "rgb(" + rgbColour.red + "," + rgbColour.green + "," + rgbColour.blue + ")";
-                canvasContext.fillStyle = colr;
+                
+                // Are we to highlight this polygon with a contrasting color?
+                // Any of the polygon points will tell us:
+                if (p1.getProperty('highlight') == "color") {
+                	// Compute a contrasting color:
+                	var contrastingColor = 0.2126 * rgbColour.red   *   rgbColour.red + 
+                	0.7152 * rgbColour.green * rgbColour.green + 
+                	0.0722 * rgbColour.blue  * rgbColour.blue;
+
+                	canvasContext.fillStyle = contrastingColor;
+                } else {
+                	canvasContext.fillStyle = colr;
+                }
                 
                 canvasContext.beginPath();
                 canvasContext.moveTo(p1.ax, p1.ay);
@@ -471,7 +483,7 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
                 
                 data3ds[index] = new greg.ross.visualisation.Point3D(x, y, 
                 		                                             data.getFormattedValue(i, j),
-                											         data.getProperty('highlight'));
+                											         data.getProperty(i,j,'highlight'));
                 
                 index++;
             }
@@ -849,7 +861,7 @@ greg.ross.visualisation.Matrix3d = function(){
  */
 greg.ross.visualisation.Point3D = function(x, y, z, properties){
     this.displayValue = "";
-    this.properties   = null;
+    this.properties   = {};
     
     this.lx;
     this.ly;
@@ -883,7 +895,9 @@ greg.ross.visualisation.Point3D = function(x, y, z, properties){
         this.ay = this.ly;
         this.az = this.lz;
         
-        this.properties = properties;
+        if (properties !== undefined && properties !== null) {
+        	this.properties = properties;
+        }
     }
     
     function multiply(p){
@@ -902,18 +916,19 @@ greg.ross.visualisation.Point3D = function(x, y, z, properties){
         this.displayValue = displayValue;
     }
     
-    function setProperties(prop) {
-    	this.properties = prop;
+    this.setProperty = function(name, val) {
+    	this.properties[name] = val;
+    }
+    
+    this.setProperties = function(props) {
+    	this.properties = props;
     }
 
-    function getProperties(prop) {
+    this.getProperties = function() {
     	return this.properties;
     }
 
-    function getProperty(propName) {
-    	if (this.properties === null) {
-    		return null;
-    	}
+    this.getProperty = function(propName) {
     	return this.properties[propName] || null;
     }
 
