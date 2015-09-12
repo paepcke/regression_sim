@@ -5,6 +5,8 @@
  *   o Make points movable? ==> surface changes.
  *   o Fix pixel offset.
  *   o Add the objective function
+ *   o Test with 2 points
+ *   o Add two points ? But watch formulas.
  */
 
 RegressionSim = function() {
@@ -1205,10 +1207,51 @@ RegressionSim = function() {
 
 	// ---------------------------- 3D Charting -------------------
 
-	this.setupSurfaceChart = function() {
+	this.setupSurfaceChart = function(options) {
+		/**
+		 * Create the 3D surface with given (optional) options.
+		 * Currently options "highlights" and "axisLabelPos" are supported.
+		 * Highlight points are points in the 3D surface that are
+		 * to be set off from their immediate environment, either by
+		 * color contrast, or by stroke width.
+		 * 
+		 * The option argument is an array of objects, or
+		 * a single object of the following format:
+		 *  
+		 *     {'highlights'   : [{"i" : row,
+		 *     	                   "j" : column,
+		 *     	                   <highlight-method>}
+		 *                            ...
+		 *                       ],
+		 *      'axisLabelPos'  : <axisPos>
+		 *     }
+		 *     
+		 * where <highlight-method> is either "stroke" or "color",
+		 * and axisPos is "middle" or "top".
+		 */
 		var numRows = 15.0 //**** 50.0;
 		var numCols = 50.0;
-
+		var axisLabelPos = null;
+		var highlights   = null;
+		
+		if (options !== undefined) {
+			axisLabelPos = options['axisLabelPos'] || null;
+			highlights   = options['highlights'] || null;
+		}
+		
+		// Make highlights quicker to check for in the 
+		// loop below:
+		highlightsTable = [];
+		if (highlights !== null) {
+			for (var i=0; i<highlights.length; i++) {
+				if (highlightsTable[i] !== undefined) {
+					highlightsTable[i].push(j);
+				} else {
+					highlightsTable[i] = [j]; 
+				}
+			}
+		}
+		
 		var tooltipStrings = new Array();
 		var data = new google.visualization.DataTable();
 
@@ -1217,7 +1260,6 @@ RegressionSim = function() {
 		}
 
 		data.addRows(numRows);
-		var d = 360 / numRows;
 		var idx = 0;
 
 		for (var i = 0; i < numRows; i++) {
@@ -1225,6 +1267,11 @@ RegressionSim = function() {
 				var matrixEntry = resMatrix[numRows * i + j];
 				var value = matrixEntry.mse;
 				data.setValue(i, j, value / 1000.0);
+				
+				// Should this value be highlighted in the 3d plot? 
+				if (highlightsTable[i] !== undefined && highlightsTable[i][j] !== undefined) {
+					data.setProperty(i, j, "highlight", highlightsTable[i][j]);
+				} 
 
 				tooltipStrings[idx] = "slope:" + matrixEntry.m.toFixed(2) + ", intercept:" + matrixEntry.b.toFixed(2) + ": error = " + value.toFixed(2);
 				idx++;
