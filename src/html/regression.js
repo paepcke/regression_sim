@@ -176,10 +176,15 @@ RegressionSim = function() {
 		// Draw the datapoints so that their error
 		// lines are below the function line, which we
 		// will draw below:
-		dataPtSpecArr = [{'x' : 4,  'y' : 13, 'id' : 'pt1', 'title' : "Abigail devoured 13 potatoes"},
+/*		dataPtSpecArr = [{'x' : 4,  'y' : 13, 'id' : 'pt1', 'title' : "Abigail devoured 13 potatoes"},
 		                 {'x' : 8,  'y' : 9,  'id' : 'pt2', 'title' : "Bob enjoyed 9 potatoes"},
 		                 {'x' : 15, 'y' : 12, 'id' : 'pt3', 'title' : "Clara's put away 12 potatoes"},
 		                 ];
+*/		
+		dataPtSpecArr = [{'x' : 4,  'y' : 5, 'id' : 'pt1', 'title' : "Abigail devoured 13 potatoes"},
+		                 {'x' : 8,  'y' : 9,  'id' : 'pt2', 'title' : "Bob enjoyed 9 potatoes"},
+		                 ];
+		
 		placeDataPoints(dataPtSpecArr);
 		
 		// Draw the initial function line:
