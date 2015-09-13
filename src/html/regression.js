@@ -1058,6 +1058,8 @@ RegressionSim = function() {
 				// Compute errors for all points with new m and b:
 				maeErrs = [];
 				mseErrs = [];
+				// For each measured point, compute the error and square of error wrt mx+b,
+				// all in terms of coord units:
 				for (var ptObjNum=0; ptObjNum<dataPtObjArr.length; ptObjNum++) {
 					// Compute the error estimators for this point
 					// for the current mx + b:
@@ -1069,7 +1071,7 @@ RegressionSim = function() {
 					var lineY = m * ptX + b;
 					var err = Math.abs(ptY - lineY);
 					maeErrs.push(err);
-					var mseErr = Math.pow(err, 2);
+					var mseErr = err * err;
 					mseErrs.push(mseErr);
 				}
 				// Collected the errors for this m/b combination.
@@ -1097,6 +1099,18 @@ RegressionSim = function() {
 				resMatrix.push({'m' : m, 'b' : b, 'mae' : finalMae, 'mse' : finalMse, 'rmse' : finalRmse});
 			}
 		}
+		//*****
+		var numRows = 15;
+		var numCols = 50;
+		console.log('Num entries: ' + resMatrix.length);
+		for (var i = 0; i < numRows; i++) {
+			for (var j = 0; j < numCols; j++) {
+				var matrixEntry = resMatrix[numRows * maxCoordSysX + j];
+				console.log(matrixEntry.m + ',' + matrixEntry.b);
+				
+			}
+		}
+		//*****
 		return {'minMae'  : minMae,
 				'minMse'  : minMse,
 				'minRmse' : minRmse,
@@ -1231,11 +1245,11 @@ RegressionSim = function() {
 		 */
 		
 		//*******
-		options = {'highlights' : [{'i' : 10,
-									'j' : 20,
+/*		options = {'highlights' : [{'i' : 2,
+									'j' : 3,
 									'method' : 'color'}]};
 		//*******
-		
+*/		
 		var numRows = 15.0 //**** 50.0;
 		var numCols = 50.0;
 		var axisLabelPos = null;
@@ -1247,14 +1261,25 @@ RegressionSim = function() {
 		}
 		
 		// Make highlights quicker to check for in the 
-		// loop below:
+		// loop below: JS arrays are sparse, so can 
+		// set, e.g. arr[10] = 40, and not use space for arr[0...9].
+		// So build a table highlightsTable[i] <-- [{'j' : point1_J, 'method' : 'color'},
+		//											{'j' : point2_J, 'method' : 'stroke'},
+		//                                                 ...
+		//                                         ]
+		
 		highlightsTable = [];
 		if (highlights !== null) {
-			for (var i=0; i<highlights.length; i++) {
-				if (highlightsTable[i] !== undefined) {
-					highlightsTable[i].push(j);
+			for (var h=0; h<highlights.length; h++) {
+				
+				var highlight = highlights[h];
+				var pt_i    = highlight.i;
+				var pt_j    = highlight.j;
+				var method  = highlight.method;
+				if (highlightsTable[pt_i] !== undefined) {
+					highlightsTable[pt_i].push({'j' : pt_j, 'method' : highlight.method});
 				} else {
-					highlightsTable[i] = [j]; 
+					highlightsTable[pt_i] = [{'j' : pt_j, 'method' : highlight.method}];
 				}
 			}
 		}
@@ -1273,11 +1298,27 @@ RegressionSim = function() {
 			for (var j = 0; j < numCols; j++) {
 				var matrixEntry = resMatrix[numRows * i + j];
 				var value = matrixEntry.mse;
-				data.setValue(i, j, value / 1000.0);
+				//****************
+				//data.setValue(i, j, value / 1000.0);
+				if (matrixEntry.m == currCoordSlope &&
+					matrixEntry.b == currCoordIntercept) {
+					data.setValue(i,j, 10);
+				} else {
+						data.setValue(i, j, value / 1000.0);
+				}
+				//****************
 				
 				// Should this value be highlighted in the 3d plot? 
-				if (highlightsTable[i] !== undefined && highlightsTable[i][j] !== undefined) {
-					data.setProperty(i, j, "highlight", highlightsTable[i][j]);
+				if (highlightsTable[i] !== undefined) {
+					// Get the j's for which point(i,j) is to be highlighted:
+					var jObjArrForThisI = highlightsTable[i];
+					for (var jIndx in jObjArrForThisI) {
+						var jHighlightInfo = jObjArrForThisI[jIndx];  
+						if (jHighlightInfo.j == j) {
+							data.setProperty(i, j, "highlight", jHighlightInfo.method);
+						}
+					}
+					
 				} 
 
 				tooltipStrings[idx] = "slope:" + matrixEntry.m.toFixed(2) + ", intercept:" + matrixEntry.b.toFixed(2) + ": error = " + value.toFixed(2);
@@ -1287,7 +1328,8 @@ RegressionSim = function() {
 		var surfacePlot = new greg.ross.visualisation.SurfacePlot(document.getElementById("surfacePlotDiv"));
 
 		// Don't fill polygons in IE. It's too slow.
-		var fillPly = true;
+		//****var fillPly = true;
+		var fillPly = false;
 
 		// Define a colour gradient.
 		var colour1 = {red:0, green:0, blue:255};
@@ -1302,7 +1344,7 @@ RegressionSim = function() {
 		var yAxisHeader = "Intercept";
 		var zAxisHeader = "Mean squared error";
 
-		var options = {xPos: 300, yPos: 50, width: 500, height: 500, colourGradient: colours,
+		var options = {xPos: 300, yPos: 50, width: 900, height: 500, colourGradient: colours,
 				fillPolygons: fillPly, tooltips: tooltipStrings, xTitle: xAxisHeader,
 				yTitle: yAxisHeader, zTitle: zAxisHeader, restrictXRotation: false};
 

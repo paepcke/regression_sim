@@ -232,11 +232,13 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
                 // Any of the polygon points will tell us:
                 if (p1.getProperty('highlight') == "color") {
                 	// Compute a contrasting color:
-                	var contrastingColor = 0.2126 * rgbColour.red   *   rgbColour.red + 
+/*                	var contrastingColor = 0.2126 * rgbColour.red   *   rgbColour.red + 
                 	0.7152 * rgbColour.green * rgbColour.green + 
                 	0.0722 * rgbColour.blue  * rgbColour.blue;
-
                 	canvasContext.fillStyle = contrastingColor;
+*/				
+                	// Color the polygon white:
+                	canvasContext.fillStyle = "rgb(255,255,255)";
                 } else {
                 	canvasContext.fillStyle = colr;
                 }
@@ -483,7 +485,8 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
                 
                 data3ds[index] = new greg.ross.visualisation.Point3D(x, y, 
                 		                                             data.getFormattedValue(i, j),
-                											         data.getProperty(i,j,'highlight'));
+                		                                             {'highlight' : data.getProperty(i,j,'highlight')});
+                											         
                 
                 index++;
             }
