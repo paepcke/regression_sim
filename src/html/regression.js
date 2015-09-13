@@ -1220,8 +1220,8 @@ RegressionSim = function() {
 		 * The option argument is an array of objects, or
 		 * a single object of the following format:
 		 *  
-		 *     {'highlights'   : [{"i" : row,
-		 *     	                   "j" : column,
+		 *     {'highlights'   : [{"x" : row,
+		 *     	                   "y" : column,
 		 *     	                   "method" : <highlight-method>}
 		 *                            ...
 		 *                       ],
@@ -1233,12 +1233,13 @@ RegressionSim = function() {
 		 */
 		
 		//*******
-		options = {'highlights' : [{'i' : 2,
-									'j' : 3,
+		options = {'highlights' : [{'x' : 2,
+									'y' : 3,
 									'method' : 'color'}]};
+		
 		//*******
 		
-		//** var numRows = 15.0 //**** 50.0;
+		var scaleFactor = 1.0/1000.0;
 		var numRows = 50.0;
 		var numCols = 50.0;
 		var axisLabelPos = null;
@@ -1262,9 +1263,9 @@ RegressionSim = function() {
 			for (var h=0; h<highlights.length; h++) {
 				
 				var highlight = highlights[h];
-				var pt_i    = highlight.i;
-				var pt_j    = highlight.j;
-				var method  = highlight.method;
+				var pt_i      = highlight.i;
+				var pt_j      = highlight.j;
+				var method    = highlight.method;
 				if (highlightsTable[pt_i] !== undefined) {
 					highlightsTable[pt_i].push({'j' : pt_j, 'method' : highlight.method});
 				} else {
@@ -1281,6 +1282,9 @@ RegressionSim = function() {
 		}
 
 		data.addRows(numRows);
+		
+		data.setTableProperty('highlights', highlights)
+		
 		var idx = 0;
 
 		for (var i = 0; i < numRows; i++) {
@@ -1288,14 +1292,14 @@ RegressionSim = function() {
 				var matrixEntry = resMatrix[numRows * i + j];
 				var value = matrixEntry.mse;
 				//****************
-				//data.setValue(i, j, value / 1000.0);
-				if (matrixEntry.m == currCoordSlope &&
+				data.setValue(i, j, value * scaleFactor);
+/*				if (matrixEntry.m == currCoordSlope &&
 					matrixEntry.b == currCoordIntercept) {
 					data.setValue(i,j, 10 * value / 1000.0);
 				} else {
 						data.setValue(i, j, value / 1000.0);
 				}
-				//****************
+*/				//****************
 				
 				// Should this value be highlighted in the 3d plot? 
 				if (highlightsTable[i] !== undefined) {

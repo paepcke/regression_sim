@@ -73,8 +73,8 @@ greg.ross.visualisation.SurfacePlot.prototype.draw = function(data, options){
     var yTitle = options.yTitle;
     var zTitle = options.zTitle;
 	var restrictXRotation = options.restrictXRotation;
-    
-    if (this.surfacePlot == undefined) 
+	
+    if (this.surfacePlot === undefined) 
         this.surfacePlot = new greg.ross.visualisation.JSSurfacePlot(xPos, yPos, w, h, colourGradient, this.containerElement, fillPolygons, tooltips, xTitle, yTitle, zTitle, restrictXRotation);
     
     this.surfacePlot.redraw(data);
@@ -186,10 +186,17 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
         }
         
         var axes = createAxes();
+        var highlightRods = createHighlightRods();
         var polygons = createPolygons(data3ds);
         
+        // Add axis polygons:
         for (i = 0; i < axes.length; i++) {
             polygons[polygons.length] = axes[i];
+        }
+
+        // Add highlight rod polygons:
+        for (var i = 0; i < highlightRods.length; i++) {
+            polygons[polygons.length] = highlightRods[i];
         }
         
         // Sort the polygons so that the closest ones are rendered last
@@ -198,21 +205,30 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
         polygons.sort(greg.ross.visualisation.PolygonComaparator);
         //polygons = sort(polygons);
         
-        canvasContext.lineWidth = 1;
-        canvasContext.strokeStyle = '#888';
+        canvasContext.lineWidth = greg.ross.visualisation.JSSurfacePlot.AXIS_LINE_WIDTH;
+        canvasContext.strokeStyle = greg.ross.visualisation.JSSurfacePlot.AXIS_STROKE_STYLE;
         canvasContext.lineJoin = "round";
         
         for (i = 0; i < polygons.length; i++) {
             var polygon = polygons[i];
             
-            if (polygon.isAnAxis()) {
+            if (polygon.isAnAxis() || polygon.isAHighlightRod()) {
                 var p1 = polygon.getPoint(0);
                 var p2 = polygon.getPoint(1);
                 
                 canvasContext.beginPath();
                 canvasContext.moveTo(p1.ax, p1.ay);
                 canvasContext.lineTo(p2.ax, p2.ay);
+                
+                if (polygon.isAHighlightRod()) {
+                	canvasContext.lineWidth = greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_LINE_WIDTH;
+                	canvasContext.strokeStyle = greg.ross.visualisation.JSSurfacePlot.HIGHLIGTH_ROD_STROKE_STYLE;
+                }
                 canvasContext.stroke();
+                if (polygon.isAHighlightRod()) {
+                	canvasContext.lineWidth = greg.ross.visualisation.JSSurfacePlot.AXISLINE_WIDTH;
+                	canvasContext.strokeStyle = greg.ross.visualisation.JSSurfacePlot.AXIS_STROKE_STYLE;
+                }
             }
             else {
                 var p1 = polygon.getPoint(0);
@@ -323,6 +339,41 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
         return result;
     }
     
+    function createHighlightRods(){
+    	/**
+    	 * Similar to createAxes, it creates vertical lines parallel
+    	 * to the z-axis wherever highlights are to be placed.
+    	 * We know the x/y of those, because they are properties of
+    	 * the table as a whole: 'highlights' : [{'x' : <num>, 'y' : <num>}, {...}, ...]
+    	 * Optionally, each highlight object may contain an additional
+    	 * property: 'height', which is the length of the rod.
+    	 */
+    	
+    	var allHighlights = data.getTableProperty('highlights');
+    	if (allHighlights === undefined || allHighlights.length == 0) {
+    		return;
+    	}
+    	var highlightRods = new Array();
+    	
+    	for (var highIndx=0; highIndx<allHighlights.length; highIndx++) {
+    		highlightObj = allHighlights[highIndx];
+    		rodHeight = (highlightObj.height === undefined) ? greg.ross.visualisation.JSSurfacePlot.DEFAULT_HIGHLIGHT_ROD_HEIGHT : highlightObj.height;
+    		rodOrigin = new greg.ross.visualisation.Point3D(highlightObj.x, highlightObj.y, 0);
+    		rodEndPt  = new greg.ross.visualisation.Point3D(highlightObj.x, highlightObj.y, rodHeight);
+    		
+    		// First false: not an axis, the true: it's a rod:
+    		var oneRod =  new greg.ross.visualisation.Polygon(cameraPosition, false, true);
+    		var transformedRodOrigin   = transformation.ChangeObjectPoint(rodOrigin);
+    		var transformedRodEndPoint = transformation.ChangeObjectPoint(rodEndPt);
+    		
+    		oneRod.addPoint(transformedRodOrigin);
+    		oneRod.addPoint(transformedRodEndPoint);
+    		oneRod.calculateCentroid();
+    		oneRod.calculateDistance();
+    		highlightRods[highlightRods.length] = oneRod;
+    	}
+    	return highlightRods;
+    }
     
     function createAxes(){
         var axisOrigin = new greg.ross.visualisation.Point3D(-0.5, 0.5, 0);
@@ -942,16 +993,23 @@ greg.ross.visualisation.Point3D = function(x, y, z, properties){
 /*
  * Polygon: This class represents a polygon on the surface plot.
  * ************************************************************
+ * If the optional isHighlightRod is set to true, then the polygon
+ * will be a line perpendicular to the x/y plane. 
  */
-greg.ross.visualisation.Polygon = function(cameraPosition, isAxis){
+greg.ross.visualisation.Polygon = function(cameraPosition, isAxis, isHighlightRod){
     this.points = new Array();
     this.cameraPosition = cameraPosition;
     this.isAxis = isAxis;
+    this.isHighlightRod = (isHighlightRod === undefined) ? false : true;
     this.centroid = null;
     this.distanceFromCamera = null;
     
     this.isAnAxis = function(){
         return this.isAxis;
+    }
+    
+    this.isAHighlightRod = function() {
+    	return this.isHighlightRod;
     }
     
     this.addPoint = function(point){
@@ -1270,4 +1328,13 @@ greg.ross.visualisation.JSSurfacePlot.DEFAULT_SCALE = 350;
 greg.ross.visualisation.JSSurfacePlot.MIN_SCALE = 50;
 greg.ross.visualisation.JSSurfacePlot.MAX_SCALE = 1100;
 greg.ross.visualisation.JSSurfacePlot.SCALE_FACTOR = 1.4;
+
+greg.ross.visualisation.JSSurfacePlot.AXIS_LINE_WIDTH = 1;
+greg.ross.visualisation.JSSurfacePlot.AXIS_STROKE_STYLE = '#888';
+
+greg.ross.visualisation.JSSurfacePlot.DEFAULT_HIGHLIGHT_ROD_HEIGHT = 0.4;
+greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_LINE_WIDTH = 4.0;
+greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_STROKE_STYLE = '#FFFFFFFF'
+    
+
 
