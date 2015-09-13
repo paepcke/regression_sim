@@ -222,12 +222,13 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
                 
                 if (polygon.isAHighlightRod()) {
                 	canvasContext.lineWidth = greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_LINE_WIDTH;
-                	canvasContext.strokeStyle = greg.ross.visualisation.JSSurfacePlot.HIGHLIGTH_ROD_STROKE_STYLE;
-                }
-                canvasContext.stroke();
-                if (polygon.isAHighlightRod()) {
+                	//****canvasContext.strokeStyle = greg.ross.visualisation.JSSurfacePlot.HIGHLIGTH_ROD_STROKE_STYLE;
+                	canvasContext.strokeStyle = "red";                	
+                	canvasContext.stroke();
                 	canvasContext.lineWidth = greg.ross.visualisation.JSSurfacePlot.AXISLINE_WIDTH;
                 	canvasContext.strokeStyle = greg.ross.visualisation.JSSurfacePlot.AXIS_STROKE_STYLE;
+                } else {
+                	canvasContext.stroke();
                 }
             }
             else {
@@ -357,15 +358,17 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
     	
     	for (var highIndx=0; highIndx<allHighlights.length; highIndx++) {
     		highlightObj = allHighlights[highIndx];
-    		rodHeight = (highlightObj.height === undefined) ? greg.ross.visualisation.JSSurfacePlot.DEFAULT_HIGHLIGHT_ROD_HEIGHT : highlightObj.height;
-    		rodOrigin = new greg.ross.visualisation.Point3D(highlightObj.x, highlightObj.y, 0);
-    		rodEndPt  = new greg.ross.visualisation.Point3D(highlightObj.x, highlightObj.y, rodHeight);
+    		var rodHeight = (highlightObj.height === undefined) ? 
+    				greg.ross.visualisation.JSSurfacePlot.DEFAULT_HIGHLIGHT_ROD_HEIGHT : highlightObj.height;
     		
-    		// First false: not an axis, the true: it's a rod:
-    		var oneRod =  new greg.ross.visualisation.Polygon(cameraPosition, false, true);
+    		var rodOrigin = new greg.ross.visualisation.Point3D(highlightObj.x - 0.5, highlightObj.y + 0.5, 0);
+    		var rodEndPt  = new greg.ross.visualisation.Point3D(highlightObj.x - 0.5, highlightObj.y + 0.5, rodHeight);
+    		
     		var transformedRodOrigin   = transformation.ChangeObjectPoint(rodOrigin);
     		var transformedRodEndPoint = transformation.ChangeObjectPoint(rodEndPt);
     		
+    		// First false: not an axis, the true: it's a rod:
+    		var oneRod =  new greg.ross.visualisation.Polygon(cameraPosition, false, true);
     		oneRod.addPoint(transformedRodOrigin);
     		oneRod.addPoint(transformedRodEndPoint);
     		oneRod.calculateCentroid();
@@ -421,11 +424,37 @@ greg.ross.visualisation.JSSurfacePlot = function(x, y, width, height, colourGrad
         for (i = 0; i < numXPoints - 1; i++) {
             for (j = 0; j < numYPoints - 1; j++) {
                 var polygon = new greg.ross.visualisation.Polygon(cameraPosition, false);
-                
-                var p1 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints)]);
+    
+                //********
+/*              var p1 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints)]);
                 var p2 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints) + numYPoints]);
                 var p3 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints) + numYPoints + 1]);
                 var p4 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints) + 1]);
+*/              
+                
+                var p1 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints)]);
+                if (p1.getProperty('highlight') !== null) {
+                	// ***** Need to find proper rod highlight below; we're using default now.
+                	//       Same for thickness (where we use 3)
+                	var p2 = transformation.ChangeObjectPoint(new greg.ross.visualisation.Point3D(p1.x, p1.y, 
+                		                                             greg.ross.visualisation.DEFAULT_HIGHLIGHT_ROD_HEIGHT,
+                		                                             p1.getProperties()));
+                	var p3 = transformation.ChangeObjectPoint(new greg.ross.visualisation.Point3D(p1.x+3, p1.y+3, 
+                		                                             //***greg.ross.visualisation.DEFAULT_HIGHLIGHT_ROD_HEIGHT,
+                													 10.0,
+                		                                             p1.getProperties()));
+                	var p4 = transformation.ChangeObjectPoint(new greg.ross.visualisation.Point3D(p1.x, p1.y, 
+                													 p1.z, 
+                		                                             p1.getProperties()));
+                } else {
+                	var p2 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints) + numYPoints]);
+                	var p3 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints) + numYPoints + 1]);
+                	var p4 = transformation.ChangeObjectPoint(data3D[j + (i * numYPoints) + 1]);
+                }
+                
+                //********                
+
+                
                 
                 polygon.addPoint(p1);
                 polygon.addPoint(p2);
@@ -1334,7 +1363,4 @@ greg.ross.visualisation.JSSurfacePlot.AXIS_STROKE_STYLE = '#888';
 
 greg.ross.visualisation.JSSurfacePlot.DEFAULT_HIGHLIGHT_ROD_HEIGHT = 0.4;
 greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_LINE_WIDTH = 4.0;
-greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_STROKE_STYLE = '#FFFFFFFF'
-    
-
-
+greg.ross.visualisation.JSSurfacePlot.HIGHLIGHT_ROD_STROKE_STYLE = '#FFF'
